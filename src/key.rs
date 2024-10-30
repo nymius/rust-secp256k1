@@ -54,6 +54,7 @@ use crate::{
 /// [`bincode`]: https://docs.rs/bincode
 /// [`cbor`]: https://docs.rs/cbor
 /// [cryptographically secure pseudorandom number generator]: https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator
+#[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct SecretKey([u8; constants::SECRET_KEY_SIZE]);
 impl_display_secret!(SecretKey);
@@ -823,6 +824,7 @@ impl<'de> serde::Deserialize<'de> for PublicKey {
 /// ```
 /// [`bincode`]: https://docs.rs/bincode
 /// [`cbor`]: https://docs.rs/cbor
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Keypair(ffi::Keypair);
 impl_fast_comparisons!(Keypair);
@@ -1152,6 +1154,7 @@ impl CPtr for Keypair {
 /// ```
 /// [`bincode`]: https://docs.rs/bincode
 /// [`cbor`]: https://docs.rs/cbor
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct XOnlyPublicKey(ffi::XOnlyPublicKey);
 impl_fast_comparisons!(XOnlyPublicKey);
