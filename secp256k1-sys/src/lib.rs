@@ -1247,10 +1247,10 @@ impl SilentpaymentsFoundOutput {
 
     pub fn new(output: &XOnlyPublicKey, tweak: &[u8; 32],  found_with_label: bool, label: &PublicKey) -> Self {
         Self {
-            output: output.clone(),
-            tweak: tweak.clone(),
+            output: *output,
+            tweak: *tweak,
             found_with_label,
-            label: label.clone(),
+            label: *label,
         }
     }
 }
