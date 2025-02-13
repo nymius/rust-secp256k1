@@ -881,8 +881,8 @@ extern "C" {
     ) -> c_int;
 
 
-    #[cfg_attr(not(rust_secp_no_symbol_renaming), link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak")]
-    pub fn secp256k1_silentpayments_recipient_create_label_tweak(
+    #[cfg_attr(not(rust_secp_no_symbol_renaming), link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_label")]
+    pub fn secp256k1_silentpayments_recipient_create_label(
         cx: *const Context,
         pubkey: *mut PublicKey,
         label_tweak32: *mut c_uchar,

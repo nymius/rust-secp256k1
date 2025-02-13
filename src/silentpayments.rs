@@ -165,7 +165,7 @@ impl fmt::Display for LabelTweakError {
 }
 
 /// Create Silent Payment label tweak and label.
-pub fn silentpayments_recipient_create_label_tweak<C: Verification>(
+pub fn silentpayments_recipient_create_label<C: Verification>(
     secp: &Secp256k1<C>,
     recipient_scan_key: &SecretKey,
     m: u32,
@@ -175,7 +175,7 @@ pub fn silentpayments_recipient_create_label_tweak<C: Verification>(
         let mut pubkey = ffi::PublicKey::new();
         let mut label_tweak32 = [0u8; 32];
 
-        let res = ffi::secp256k1_silentpayments_recipient_create_label_tweak(
+        let res = ffi::secp256k1_silentpayments_recipient_create_label(
             cx,
             &mut pubkey,
             label_tweak32.as_mut_c_ptr(),
