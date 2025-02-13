@@ -403,6 +403,15 @@ SECP_CFLAGS="$SECP_CFLAGS $WERROR_CFLAGS"
 # Processing must be done in a reverse topological sorting of the dependency graph
 # (dependent module first).
 if test x"$enable_module_silentpayments" = x"yes"; then
+  if test x"$enable_module_schnorrsig" = x"no"; then
+    AC_MSG_ERROR([Module dependency error: You have disabled the schnorrsig module explicitly, but it is required by the silentpayments module.])
+  fi
+  enable_module_schnorrsig=yes
+
+  if test x"$enable_module_extrakeys" = x"no"; then
+    AC_MSG_ERROR([Module dependency error: You have disabled the extrakeys module explicitly, but it is required by the silentpayments module.])
+  fi
+  enable_module_extrakeys=yes
   SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_SILENTPAYMENTS=1"
 fi
 

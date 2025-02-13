@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <secp256k1.h>
 #include <secp256k1_extrakeys.h>
 #include <secp256k1_silentpayments.h>
 
@@ -103,7 +102,7 @@ const unsigned char* label_lookup(
     const struct labels_cache* cache = (const struct labels_cache*)cache_ptr;
     size_t i;
     for (i = 0; i < cache->entries_used; i++) {
-        if (rustsecp256k1_v0_12_memcmp_var(cache->entries[i].label, label33, 33) == 0) {
+        if (memcmp(cache->entries[i].label, label33, 33) == 0) {
             return cache->entries[i].label_tweak;
         }
     }
@@ -115,7 +114,9 @@ int main(void) {
     unsigned char randomize[32];
     unsigned char xonly_print[32];
     rustsecp256k1_v0_12_xonly_pubkey tx_inputs[N_INPUTS];
+    const rustsecp256k1_v0_12_xonly_pubkey *tx_input_ptrs[N_INPUTS];
     rustsecp256k1_v0_12_xonly_pubkey tx_outputs[N_OUTPUTS];
+    const rustsecp256k1_v0_12_xonly_pubkey *tx_output_ptrs[N_OUTPUTS];
     int ret;
     size_t i;
 
@@ -133,12 +134,10 @@ int main(void) {
 
     /*** Sending ***/
     {
-        rustsecp256k1_v0_12_keypair sender_seckeys[N_INPUTS];
-        const rustsecp256k1_v0_12_keypair *sender_seckey_ptrs[N_INPUTS];
+        rustsecp256k1_v0_12_keypair sender_keypairs[N_INPUTS];
+        const rustsecp256k1_v0_12_keypair *sender_keypair_ptrs[N_INPUTS];
         rustsecp256k1_v0_12_silentpayments_recipient recipients[N_OUTPUTS];
         const rustsecp256k1_v0_12_silentpayments_recipient *recipient_ptrs[N_OUTPUTS];
-        rustsecp256k1_v0_12_xonly_pubkey generated_outputs[N_OUTPUTS];
-        rustsecp256k1_v0_12_xonly_pubkey *generated_output_ptrs[N_OUTPUTS];
         char* address_amounts[N_OUTPUTS] = {"1.0 BTC", "2.0 BTC", "3.0 BTC"};
         unsigned char (*sp_addresses[N_OUTPUTS])[2][33];
         unsigned char seckey[32];
@@ -166,13 +165,13 @@ int main(void) {
             }
             /* Try to create a keypair with a valid context, it should only fail
              * if the secret key is zero or out of range. */
-            if (rustsecp256k1_v0_12_keypair_create(ctx, &sender_seckeys[i], seckey)) {
-                sender_seckey_ptrs[i] = &sender_seckeys[i];
+            if (rustsecp256k1_v0_12_keypair_create(ctx, &sender_keypairs[i], seckey)) {
+                sender_keypair_ptrs[i] = &sender_keypairs[i];
                 ret = rustsecp256k1_v0_12_keypair_xonly_pub(
                     ctx,
                     &tx_inputs[i],
                     NULL,
-                    &sender_seckeys[i]
+                    &sender_keypairs[i]
                 );
                 assert(ret);
             } else {
@@ -216,13 +215,18 @@ int main(void) {
             recipient_ptrs[i] = &recipients[i];
         }
         for (i = 0; i < N_OUTPUTS; i++) {
-            generated_output_ptrs[i] = &generated_outputs[i];
+            tx_output_ptrs[i] = &tx_outputs[i];
         }
+        /* To keep things simple, we cast the tx_output_ptr array to remove the
+         * const qualifer, so that we can create the outputs. We want the const
+         * qualifer because this same array will be passed to the scan function
+         * later in the example.
+         */
         ret = rustsecp256k1_v0_12_silentpayments_sender_create_outputs(ctx,
-            generated_output_ptrs,
+            (rustsecp256k1_v0_12_xonly_pubkey **)tx_output_ptrs,
             recipient_ptrs, N_OUTPUTS,
             smallest_outpoint,
-            sender_seckey_ptrs, N_INPUTS,
+            sender_keypair_ptrs, N_INPUTS,
             NULL, 0
         );
         assert(ret);
@@ -232,18 +236,10 @@ int main(void) {
             printf("%s : ", address_amounts[i]);
             rustsecp256k1_v0_12_xonly_pubkey_serialize(ctx,
                 xonly_print,
-                &generated_outputs[i]
+                &tx_outputs[i]
             );
             print_hex(xonly_print, sizeof(xonly_print));
         }
-        /* Store the generated outputs in the `tx_outputs` array. The
-         * `tx_outputs` array is used to represent the final transaction, which
-         * is what Bob and Carol would use for scanning.
-         */
-        for (i = 0; i < N_OUTPUTS; i++) {
-            tx_outputs[i] = generated_outputs[i];
-        }
-
         /* It's best practice to try to clear secrets from memory after using
          * them. This is done because some bugs can allow an attacker to leak
          * memory, for example through "out of bounds" array access (see
@@ -254,7 +250,7 @@ int main(void) {
          * good compiler will remove any writes that aren't used. */
         secure_erase(seckey, sizeof(seckey));
         for (i = 0; i < N_INPUTS; i++) {
-            secure_erase(&sender_seckeys[i], sizeof(sender_seckeys[i]));
+            secure_erase(&sender_keypairs[i], sizeof(sender_keypairs[i]));
         }
     }
 
@@ -271,8 +267,6 @@ int main(void) {
          * These will be used to demonstrate scanning as a full node and
          * scanning as a light client.
          */
-        const rustsecp256k1_v0_12_xonly_pubkey *tx_input_ptrs[N_INPUTS];
-        const rustsecp256k1_v0_12_xonly_pubkey *tx_output_ptrs[N_OUTPUTS];
         unsigned char light_client_data33[33];
 
         for (i = 0; i < N_INPUTS; i++) {
@@ -294,7 +288,7 @@ int main(void) {
              */
             rustsecp256k1_v0_12_silentpayments_found_output found_outputs[N_OUTPUTS];
             rustsecp256k1_v0_12_silentpayments_found_output *found_output_ptrs[N_OUTPUTS];
-            rustsecp256k1_v0_12_silentpayments_public_data public_data;
+            rustsecp256k1_v0_12_silentpayments_recipient_public_data public_data;
             rustsecp256k1_v0_12_pubkey spend_pubkey;
             size_t n_found_outputs;
             struct labels_cache labels_cache;
@@ -313,7 +307,7 @@ int main(void) {
                  *      _silentpayments_recipient_scan_outputs(..., NULL, NULL);
                  *
                  *  In this case, since Bob has access to the full transaction
-                 *  outputs when scanning its easy for him to scan with labels,
+                 *  outputs when scanning, it's easy for him to scan with labels,
                  *  as demonstrated below. For efficient scanning, Bob keeps a
                  *  cache of every label he has previously used and uses a
                  *  callback to check if a potential label exists in his cache.
@@ -339,13 +333,13 @@ int main(void) {
                  * and is using the resulting labelled spend pubkey to encode a
                  * labelled silent payments address.
                  */
-                ret = rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(ctx,
+                ret &= rustsecp256k1_v0_12_silentpayments_recipient_create_label(ctx,
                     &label,
                     labels_cache.entries[0].label_tweak,
                     bob_scan_key,
                     m
                 );
-                rustsecp256k1_v0_12_ec_pubkey_serialize(ctx,
+                ret &= rustsecp256k1_v0_12_ec_pubkey_serialize(ctx,
                     labels_cache.entries[0].label,
                     &len,
                     &label,
@@ -356,12 +350,12 @@ int main(void) {
             }
 
             /* Bob collects the public data from the transaction inputs and
-             * creates a `rustsecp256k1_v0_12_silentpayments_public_data` object. He uses
+             * creates a `rustsecp256k1_v0_12_silentpayments_recipient_public_data` object. He uses
              * this for his own scanning and also serializes the `public_data`
              * object to send to light clients. We will use this later for
              * Carol, who is scanning as a light client. Note, anyone can create
-             * and provide these `public_data` objecs, i.e. you don't need to be
-             * a silent payments wallet, just someone interested in vending this
+             * and provide these `public_data` objects, i.e. you don't need to be
+             * a silent payments wallet, just someone interested in providing this
              * data to light clients, e.g. a wallet service provider. In our
              * example, Bob is scanning for himself but also sharing this data
              * with light clients.
@@ -372,16 +366,25 @@ int main(void) {
                 tx_input_ptrs, N_INPUTS,
                 NULL, 0 /* NULL because no eligible plain pubkey inputs were found in the tx */
             );
-            assert(ret);
-            ret = rustsecp256k1_v0_12_silentpayments_recipient_public_data_serialize(ctx,
+            ret &= rustsecp256k1_v0_12_silentpayments_recipient_public_data_serialize(ctx,
                 light_client_data33,
                 &public_data
             );
-            assert(ret);
+            if (!ret) {
+                /* We need to always check that the public data object is valid
+                 * before proceeding, since a malicious actor could create a transaction
+                 * such that the input public keys sum to the point at infinity, which
+                 * could cause our node to crash if, e.g., we assume that public_data_create
+                 * will always succeed."
+                 */
+                printf("\n");
+                printf("This transaction is not valid for silent payments, skipping.");
+                return 0;
+            }
 
             /* Scan the transaction */
             n_found_outputs = 0;
-            ret = rustsecp256k1_v0_12_silentpayments_recipient_scan_outputs(ctx,
+            ret &= rustsecp256k1_v0_12_silentpayments_recipient_scan_outputs(ctx,
                 found_output_ptrs, &n_found_outputs,
                 tx_output_ptrs, N_OUTPUTS,
                 bob_scan_key,
@@ -389,16 +392,29 @@ int main(void) {
                 &spend_pubkey,
                 label_lookup, &labels_cache /* NULL, NULL for no labels */
             );
-            assert(n_found_outputs == 1);
-            printf("\n");
-            printf("Bob found the following outputs: \n");
-            for (i = 0; i < n_found_outputs; i++) {
-                printf("    ");
-                rustsecp256k1_v0_12_xonly_pubkey_serialize(ctx,
-                    xonly_print,
-                    &found_outputs[i].output
-                );
-                print_hex(xonly_print, sizeof(xonly_print));
+            if (!ret) {
+                /* Since we've already validated the public data, this shouldn't fail, but
+                 * better to be careful here since we are scanning data that could have been
+                 * maliciously created.
+                 */
+                printf("\n");
+                printf("Something went wrong while scanning this transaction, skipping.");
+                return 0;
+            }
+            if (n_found_outputs > 0) {
+                printf("\n");
+                printf("Bob found the following outputs: \n");
+                for (i = 0; i < n_found_outputs; i++) {
+                    printf("    ");
+                    rustsecp256k1_v0_12_xonly_pubkey_serialize(ctx,
+                        xonly_print,
+                        &found_outputs[i].output
+                    );
+                    print_hex(xonly_print, sizeof(xonly_print));
+                }
+            } else {
+                printf("\n");
+                printf("Bob did not find any outputs in this transaction.");
             }
         }
         {
@@ -408,7 +424,14 @@ int main(void) {
              * transaction outputs. This means she will need to first generate
              * an output, check if it exists in the UTXO set (e.g. BIP158 or
              * some other means of querying) and only proceed to check the next
-             * output (by incrementing `k`) if the first output exists.
+             * output (by incrementing `k`) if the first output exists. It's
+             * also difficult for Carol to efficiently scan for labels without
+             * the transaction outputs, but Carol can still use labels as a
+             * light client by pregenerating all possible labels and adding them
+             * to the generated output (i.e., `k = 0`). Once at least one output
+             * is found, she can request the full block and scan the the full
+             * transaction. This assumes Carol will only use a small number of
+             * of labels as a light client.
              *
              * Additionally, Carol likely does not have access to the
              * transaction inputs and prevout information, so she uses the
@@ -418,11 +441,12 @@ int main(void) {
              *
              * In practice, Carol wouldn't know the number of outputs ahead of
              * time but we are cheating here to keep the example simple.
+             *
              */
             unsigned char ser_found_outputs[2][32];
             unsigned char shared_secret[33];
             rustsecp256k1_v0_12_pubkey spend_pubkey;
-            rustsecp256k1_v0_12_silentpayments_public_data public_data;
+            rustsecp256k1_v0_12_silentpayments_recipient_public_data public_data;
             size_t n_found_outputs;
 
             /* Load Carol's spend public key */
@@ -440,12 +464,20 @@ int main(void) {
                 &public_data,
                 light_client_data33
             );
-            assert(ret);
-            ret = rustsecp256k1_v0_12_silentpayments_recipient_create_shared_secret(ctx,
+            if (!ret) {
+                printf("\n");
+                printf("This transaction is not valid for silent payments, skipping.");
+                return 0;
+            }
+            ret &= rustsecp256k1_v0_12_silentpayments_recipient_create_shared_secret(ctx,
                 shared_secret,
                 carol_scan_key,
                 &public_data
             );
+            /* Since we've already validated the public data, the only reason this could fail
+             * is if we input a bad scan key or bad spend public key, which should never happen
+             * because this is data under our control.
+             */
             assert(ret);
             n_found_outputs = 0;
             {
@@ -460,7 +492,11 @@ int main(void) {
                         &spend_pubkey,
                         k
                     );
-                    assert(ret);
+                    if (!ret) {
+                        printf("\n");
+                        printf("This transaction is not valid for silent payments, skipping.");
+                        return 0;
+                    }
                     /* At this point, we check that the utxo exists with a light
                      * client protocol. For this example, we'll just iterate
                      * through the list of transaction outputs
@@ -488,11 +524,16 @@ int main(void) {
                 }
             }
 
-            printf("\n");
-            printf("Carol found the following outputs: \n");
-            for (i = 0; i < n_found_outputs; i++) {
-                printf("    ");
-                print_hex(ser_found_outputs[i], 32);
+            if (n_found_outputs > 0) {
+                printf("\n");
+                printf("Carol found the following outputs: \n");
+                for (i = 0; i < n_found_outputs; i++) {
+                    printf("    ");
+                    print_hex(ser_found_outputs[i], 32);
+                }
+            } else {
+                printf("\n");
+                printf("Carol did not find any outputs in this transaction.");
             }
         }
     }

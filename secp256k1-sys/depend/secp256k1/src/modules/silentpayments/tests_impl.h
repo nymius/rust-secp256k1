@@ -256,8 +256,18 @@ static void test_send_api(void) {
     p[0] = ALICE_SECKEY;
     memset(&r[1].spend_pubkey.data, 0, sizeof(rustsecp256k1_v0_12_pubkey));
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_sender_create_outputs(CTX, op, rp, 2, SMALLEST_OUTPOINT, NULL, 0, p, 1));
-    memset(&r[0].scan_pubkey.data, 0, sizeof(rustsecp256k1_v0_12_pubkey));
-    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_sender_create_outputs(CTX, op, rp, 1, SMALLEST_OUTPOINT, NULL, 0, p, 1));
+    /* TODO: make these tests work where the scan key is invalid.
+     * For context, _ec_pubkey_cmp makes a call to the illegal_callback_fn but does not return an error, so theres no way
+     * to handle it. In the create outputs function, ec_pubkey_cmp is called and then later scan_pubkey is loaded and the
+     * illegal_arg is handled there. But now there have been two calls to illegal_callback, which violates the assumption
+     * of the CHECK_ILLEGAL macro
+     *
+     * memset(&r[1].scan_pubkey.data, 0, sizeof(rustsecp256k1_v0_12_pubkey));
+     * rustsecp256k1_v0_12_context_set_illegal_callback(CTX, uncounting_illegal_callback_fn, 0);
+     * CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_sender_create_outputs(CTX, op, rp, 2, SMALLEST_OUTPOINT, NULL, 0, p, 1));
+     * memset(&r[0].scan_pubkey.data, 0, sizeof(rustsecp256k1_v0_12_pubkey));
+     * CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_sender_create_outputs(CTX, op, rp, 2, SMALLEST_OUTPOINT, NULL, 0, p, 1));
+     */
 }
 
 static void test_label_api(void) {
@@ -272,22 +282,22 @@ static void test_label_api(void) {
 
     /* Create a label and labelled spend public key, verify we get the expected result */
     CHECK(rustsecp256k1_v0_12_ec_pubkey_parse(CTX, &s, BOB_ADDRESS[1], 33));
-    CHECK(rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(CTX, &l, lt, ALICE_SECKEY, 1));
+    CHECK(rustsecp256k1_v0_12_silentpayments_recipient_create_label(CTX, &l, lt, ALICE_SECKEY, 1));
     CHECK(rustsecp256k1_v0_12_silentpayments_recipient_create_labelled_spend_pubkey(CTX, &ls, &s, &l));
     CHECK(rustsecp256k1_v0_12_ec_pubkey_parse(CTX, &e, expected, 33));
     CHECK(rustsecp256k1_v0_12_ec_pubkey_cmp(CTX, &ls, &e) == 0);
 
     /* Check null values are handled */
-    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(CTX, NULL, lt, ALICE_SECKEY, 1));
-    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(CTX, &l, NULL, ALICE_SECKEY, 1));
-    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(CTX, &l, lt, NULL, 1));
+    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_label(CTX, NULL, lt, ALICE_SECKEY, 1));
+    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_label(CTX, &l, NULL, ALICE_SECKEY, 1));
+    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_label(CTX, &l, lt, NULL, 1));
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_labelled_spend_pubkey(CTX, NULL, &s, &l));
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_labelled_spend_pubkey(CTX, &ls, NULL, &l));
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_labelled_spend_pubkey(CTX, &ls, &s, NULL));
 }
 
 static void test_recipient_api(void) {
-    rustsecp256k1_v0_12_silentpayments_public_data pd;      /* public data */
+    rustsecp256k1_v0_12_silentpayments_recipient_public_data pd;      /* public data */
     rustsecp256k1_v0_12_silentpayments_found_output f;      /* a silent payment found output */
     rustsecp256k1_v0_12_silentpayments_found_output *fp[1]; /* array of pointers to found outputs */
     rustsecp256k1_v0_12_xonly_pubkey t;                     /* taproot x-only public key */
@@ -330,7 +340,7 @@ static void test_recipient_api(void) {
     /* Try to create a shared secret with a malformed recipient scan key (all zeros) */
     CHECK(rustsecp256k1_v0_12_silentpayments_recipient_create_shared_secret(CTX, o, MALFORMED_SECKEY, &pd) == 0);
     /* Try to create a shared secret with a malformed public key (all zeros) */
-    memset(&pd.data[1], 0, sizeof(&pd.data - 1));
+    memset(&pd.data[1], 0, sizeof(pd.data) - 1);
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_create_shared_secret(CTX, o, ALICE_SECKEY, &pd));
     /* Reset pd to a valid public data object */
     CHECK(rustsecp256k1_v0_12_silentpayments_recipient_public_data_parse(CTX, &pd, BOB_ADDRESS[0]));
@@ -361,7 +371,6 @@ static void test_recipient_api(void) {
 
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_scan_outputs(CTX, fp, &n_f, tp, 0, ALICE_SECKEY, &pd, &p, &label_lookup, &labels_cache));
     CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_scan_outputs(CTX, fp, &n_f, tp, 1, ALICE_SECKEY, &pd, &p, NULL, &labels_cache));
-    CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_silentpayments_recipient_scan_outputs(CTX, fp, &n_f, tp, 1, ALICE_SECKEY, &pd, &p, &label_lookup, NULL));
 }
 
 void run_silentpayments_test_vector_send(const struct bip352_test_vector *test) {
@@ -447,7 +456,7 @@ void run_silentpayments_test_vector_receive(const struct bip352_test_vector *tes
     size_t n_found = 0;
     unsigned char found_output[32];
     unsigned char found_signatures[10][64];
-    rustsecp256k1_v0_12_silentpayments_public_data public_data, public_data_index;
+    rustsecp256k1_v0_12_silentpayments_recipient_public_data public_data, public_data_index;
     unsigned char shared_secret_lightclient[33];
     unsigned char light_client_data[33];
 
@@ -495,7 +504,7 @@ void run_silentpayments_test_vector_receive(const struct bip352_test_vector *tes
     for (i = 0; i < test->num_labels; i++) {
         unsigned int m = test->label_integers[i];
         struct label_cache_entry *cache_entry = &labels_cache.entries[labels_cache.entries_used];
-        CHECK(rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(CTX, &label, cache_entry->label_tweak, test->scan_seckey, m));
+        CHECK(rustsecp256k1_v0_12_silentpayments_recipient_create_label(CTX, &label, cache_entry->label_tweak, test->scan_seckey, m));
         CHECK(rustsecp256k1_v0_12_ec_pubkey_serialize(CTX, cache_entry->label, &len, &label, SECP256K1_EC_COMPRESSED));
         labels_cache.entries_used++;
     }

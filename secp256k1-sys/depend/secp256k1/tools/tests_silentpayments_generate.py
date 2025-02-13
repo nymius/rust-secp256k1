@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+
+'''
+A script to convert BIP352 test vectors from JSON to a C header.
+
+Usage:
+
+    ./tools/tests_silentpayments_generate.py src/modules/silentpayments/bip352_send_and_receive_test_vectors.json  > ./src/modules/silentpayments/vectors.h
+'''
+
 import hashlib
 import json
 import sys
@@ -161,6 +170,10 @@ def emit_outputs(comment, outputs, include_count=False, last=False, spacing=8):
     if not last:
         out += ","
     out += "\n"
+
+if len(sys.argv) != 2:
+    print("Usage: tests_silentpayments_generate.py vectors.json > vectors.h")
+    sys.exit(1)
 
 filename_input = sys.argv[1]
 with open(filename_input) as f:

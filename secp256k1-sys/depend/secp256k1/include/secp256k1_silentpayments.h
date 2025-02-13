@@ -8,34 +8,36 @@
 extern "C" {
 #endif
 
-/* This module provides an implementation for Silent Payments, as specified in
- * BIP352. This particularly involves the creation of input tweak data by
- * summing up private or public keys and the derivation of a shared secret using
- * Elliptic Curve Diffie-Hellman. Combined are either:
- *   - spender's private keys and recipient's public key (a * B, sender side)
- *   - spender's public keys and recipient's private key (A * b, recipient side)
- * With this result, the necessary key material for ultimately creating/scanning
- * or spending Silent Payment outputs can be determined.
+/** This module provides an implementation for Silent Payments, as specified in
+ *  BIP352. This particularly involves the creation of input tweak data by
+ *  summing up secret or public keys and the derivation of a shared secret using
+ *  Elliptic Curve Diffie-Hellman. Combined are either:
+ *    - spender's secret keys and recipient's public key (a * B, sender side)
+ *    - spender's public keys and recipient's secret key (A * b, recipient side)
+ *  With this result, the necessary key material for ultimately creating/scanning
+ *  or spending Silent Payment outputs can be determined.
  *
- * Note that this module is _not_ a full implementation of BIP352, as it
- * inherently doesn't deal with higher-level concepts like addresses, output
- * script types or transactions. The intent is to provide a module for
- * abstracting away the elliptic-curve operations required for the protocol. For
- * any wallet software already using libsecp256k1, this API should provide all
- * the functions needed for a Silent Payments implementation without requiring
- * any further elliptic-curve operations from the wallet.
+ *  Note that this module is _not_ a full implementation of BIP352, as it
+ *  inherently doesn't deal with higher-level concepts like addresses, output
+ *  script types or transactions. The intent is to provide a module for
+ *  abstracting away the elliptic-curve operations required for the protocol. For
+ *  any wallet software already using libsecp256k1, this API should provide all
+ *  the functions needed for a Silent Payments implementation without requiring
+ *  any further elliptic-curve operations from the wallet.
  */
 
-/* This struct serves as an In param for passing the silent payment address
- * data. The index field is for when more than one address is being sent to in
- * a transaction. Index is set based on the original ordering of the addresses
- * and used to return the generated outputs matching the original ordering.
- * When more than one recipient is used the recipient array will be sorted in
- * place as part of generating the outputs, but the generated outputs will be
- * returned in the original ordering specified by the index to ensure the
- * caller is able to match up the generated outputs to the correct silent
- * payment address (e.g. to be able to assign the correct amounts to the
- * correct generated outputs in the final transaction).
+/** This struct serves as an input parameter for passing the silent payment
+ *  address data.
+ *
+ *  The index field is for when more than one address is being sent to in
+ *  a transaction. Index is set based on the original ordering of the addresses
+ *  and used to return the generated outputs matching the original ordering.
+ *  When more than one recipient is used, the recipient array will be sorted in
+ *  place as part of generating the outputs, but the generated outputs will be
+ *  returned in the original ordering specified by the index to ensure the
+ *  caller is able to match up the generated outputs to the correct silent
+ *  payment address (e.g., to be able to assign the correct amounts to the
+ *  correct generated outputs in the final transaction).
  */
 typedef struct {
     rustsecp256k1_v0_12_pubkey scan_pubkey;
@@ -45,18 +47,21 @@ typedef struct {
 
 /** Create Silent Payment outputs for recipient(s).
  *
- *  Given a list of n private keys a_1...a_n (one for each silent payment
+ *  Given a list of n secret keys a_1...a_n (one for each silent payment
  *  eligible input to spend), a serialized outpoint, and a list of recipients,
  *  create the taproot outputs.
  *
- *  `outpoint_smallest36` refers to the smallest outpoint lexicographically
+ *  `outpoint_smallest` refers to the smallest outpoint lexicographically
  *  from the transaction inputs (both silent payments eligible and non-eligible
  *  inputs). This value MUST be the smallest outpoint out of all of the
  *  transaction inputs, otherwise the recipient will be unable to find the
- *  payment.
+ *  payment. Determining the smallest outpoint from the list of transaction
+ *  inputs is the responsibility of the caller. It is strongly recommended
+ *  that implementations ensure they are doing this correctly by using the
+ *  test vectors from BIP352.
  *
- *  If necessary, the private keys are negated to enforce the right y-parity.
- *  For that reason, the private keys have to be passed in via two different
+ *  If necessary, the secret keys are negated to enforce the right y-parity.
+ *  For that reason, the secret keys have to be passed in via two different
  *  parameter pairs, depending on whether the seckeys correspond to x-only
  *  outputs or not.
  *
@@ -64,8 +69,8 @@ typedef struct {
  *  Args:                ctx: pointer to a context object
  *  Out:   generated_outputs: pointer to an array of pointers to xonly pubkeys,
  *                            one per recipient.
- *                            The order of outputs here matches the original
- *                            ordering of the recipients array.
+ *                            The outputs here are sorted by the index value
+ *                            provided in the recipient objects.
  *  In:           recipients: pointer to an array of pointers to silent payment
  *                            recipients, where each recipient is a scan public
  *                            key, a spend public key, and an index indicating
@@ -82,17 +87,17 @@ typedef struct {
  *                            total number of outputs to be generated as each
  *                            recipient may passed multiple times to generate
  *                            multiple outputs for the same recipient
- *       outpoint_smallest36: serialized smallest outpoint (lexicographically)
- *                            from the transaction inputs
- *           taproot_seckeys: pointer to an array of pointers to 32-byte
- *                            private keys of taproot inputs (can be NULL if no
- *                            private keys of taproot inputs are used)
- *         n_taproot_seckeys: the number of sender's taproot input private keys
+ *         outpoint_smallest: serialized (36-byte) smallest outpoint
+ *                            (lexicographically) from the transaction inputs
+ *           taproot_seckeys: pointer to an array of pointers to taproot
+ *                            keypair inputs (can be NULL if no secret keys
+ *                            of taproot inputs are used)
+ *         n_taproot_seckeys: the number of sender's taproot input secret keys
  *             plain_seckeys: pointer to an array of pointers to 32-byte
- *                            private keys of non-taproot inputs (can be NULL
- *                            if no private keys of non-taproot inputs are
+ *                            secret keys of non-taproot inputs (can be NULL
+ *                            if no secret keys of non-taproot inputs are
  *                            used)
- *           n_plain_seckeys: the number of sender's non-taproot input private
+ *           n_plain_seckeys: the number of sender's non-taproot input secret
  *                            keys
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayments_sender_create_outputs(
@@ -123,7 +128,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
  *  In:   recipient_scan_key: pointer to the recipient's scan key
  *                         m: label integer (0 is used for change outputs)
  */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak(
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayments_recipient_create_label(
     const rustsecp256k1_v0_12_context *ctx,
     rustsecp256k1_v0_12_pubkey *label,
     unsigned char *label_tweak32,
@@ -134,7 +139,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
 /** Create Silent Payment labelled spend public key.
  *
  *  Given a recipient's spend public key B_spend and a label, calculate the
- *  corresponding serialized labelled spend public key:
+ *  corresponding labelled spend public key:
  *
  *  B_m = B_spend + label
  *
@@ -162,19 +167,19 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
  *
  *  This structure does not contain secret data. Guaranteed to be 98 bytes in
  *  size. It can be safely copied/moved. Created with
- *  `rustsecp256k1_v0_12_silentpayments_public_data_create`. Can be serialized as a
+ *  `rustsecp256k1_v0_12_silentpayments_recipient_public_data_create`. Can be serialized as a
  *  compressed public key using
- *  `rustsecp256k1_v0_12_silentpayments_public_data_serialize`. The serialization is
+ *  `rustsecp256k1_v0_12_silentpayments_recipient_public_data_serialize`. The serialization is
  *  intended for sending the public input data to light clients. Light clients
  *  can use this serialization with
- *  `rustsecp256k1_v0_12_silentpayments_public_data_parse`.
+ *  `rustsecp256k1_v0_12_silentpayments_recipient_public_data_parse`.
  */
 typedef struct {
     unsigned char data[98];
-} rustsecp256k1_v0_12_silentpayments_public_data;
+} rustsecp256k1_v0_12_silentpayments_recipient_public_data;
 
 /** Compute Silent Payment public data from input public keys and transaction
- * inputs.
+ *  inputs.
  *
  *  Given a list of n public keys A_1...A_n (one for each silent payment
  *  eligible input to spend) and a serialized outpoint_smallest, create a
@@ -196,7 +201,7 @@ typedef struct {
  *
  *  If calling this function for simply aggregating the public transaction data
  *  for later use, the caller can save the result with
- *  `silentpayments_public_data_serialize`.
+ *  `silentpayments_recipient_public_data_serialize`.
  *
  *  Returns: 1 if tweak data creation was successful. 0 if an error occured.
  *  Args:                 ctx: pointer to a context object
@@ -215,7 +220,7 @@ typedef struct {
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayments_recipient_public_data_create(
     const rustsecp256k1_v0_12_context *ctx,
-    rustsecp256k1_v0_12_silentpayments_public_data *public_data,
+    rustsecp256k1_v0_12_silentpayments_recipient_public_data *public_data,
     const unsigned char *outpoint_smallest36,
     const rustsecp256k1_v0_12_xonly_pubkey * const *xonly_pubkeys,
     size_t n_xonly_pubkeys,
@@ -223,36 +228,36 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
     size_t n_plain_pubkeys
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
-/** Serialize a silentpayments_public_data object into a 33-byte sequence.
+/** Serialize a silentpayments_recipient_public_data object into a 33-byte sequence.
  *
  *  Returns: 1 always.
  *
  *  Args:         ctx: pointer to a context object
  *  Out:     output33: pointer to a 33-byte array to place the serialized
- *                     `silentpayments_public_data` in
- *  In:   public_data: pointer to an initialized silentpayments_public_data
+ *                     `silentpayments_recipient_public_data` in
+ *  In:   public_data: pointer to an initialized silentpayments_recipient_public_data
  *                     object
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayments_recipient_public_data_serialize(
     const rustsecp256k1_v0_12_context *ctx,
     unsigned char *output33,
-    const rustsecp256k1_v0_12_silentpayments_public_data *public_data
+    const rustsecp256k1_v0_12_silentpayments_recipient_public_data *public_data
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
 /** Parse a 33-byte sequence into a silent_payments_public_data object.
  *
- *  Returns: 1 if the data was able to be parsed. 
+ *  Returns: 1 if the data was able to be parsed.
  *           0 if the sequence is invalid (e.g. does not represent a valid
  *           public key).
  *
  *  Args:         ctx: pointer to a context object.
- *  Out:  public_data: pointer to a silentpayments_public_data object. If 1 is
+ *  Out:  public_data: pointer to a silentpayments_recipient_public_data object. If 1 is
  *                     returned, it is set to a parsed version of input33.
- *  In:       input33: pointer to a serialized silentpayments_public_data.
+ *  In:       input33: pointer to a serialized silentpayments_recipient_public_data.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayments_recipient_public_data_parse(
     const rustsecp256k1_v0_12_context *ctx,
-    rustsecp256k1_v0_12_silentpayments_public_data *public_data,
+    rustsecp256k1_v0_12_silentpayments_recipient_public_data *public_data,
     const unsigned char *input33
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
@@ -261,10 +266,13 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
  *  This function is implemented by the recipient to check if a value exists in
  *  the recipients label cache during scanning.
  *
+ *  For creating the labels cache,
+ *  `rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak` can be used.
+ *
  *  Returns: pointer to the 32-byte label tweak if there is a match.
  *           NULL pointer if there is no match.
  *
- *  In:         label: pointer to the label value to check (computed during
+ *  In:         label: pointer to the label pubkey to check (computed during
  *                     scanning)
  *      label_context: pointer to the recipients label cache.
  */
@@ -292,12 +300,15 @@ typedef struct {
 
 /** Scan for Silent Payment transaction outputs.
  *
- *  Given a input public sum, an input_hash, a recipient's spend public key
- *  B_spend, and the relevant transaction outputs, scan for outputs belonging to
+ *  Given a public_data object, a recipient's scan key and spend public key,
+ *  and the relevant transaction outputs, scan for outputs belonging to
  *  the recipient and return the tweak(s) needed for spending the output(s). An
  *  optional label_lookup callback function and label_context can be passed if
  *  the recipient uses labels. This allows for checking if a label exists in
  *  the recipients label cache and retrieving the label tweak during scanning.
+ *
+ *  For the labels cache, `rustsecp256k1_v0_12_silentpayments_recipient_create_label_tweak`
+ *  can be used.
  *
  *  Returns: 1 if output scanning was successful.
  *           0 if an error occured.
@@ -314,15 +325,14 @@ typedef struct {
  *  In:              tx_outputs: pointer to the tx's x-only public key outputs
  *                 n_tx_outputs: the number of tx_outputs being scanned
  *           recipient_scan_key: pointer to the recipient's scan key
- *                  public_data: pointer to the input public key sum
- *                               (optionally, with the `input_hash` multiplied
- *                               in, see `_recipient_public_data_create`).
+ *                  public_data: pointer to the transaction public data
+ *                               (see `_recipient_public_data_create`).
  *       recipient_spend_pubkey: pointer to the recipient's spend pubkey
  *                 label_lookup: pointer to a callback function for looking up
  *                               a label value. This function takes a label
  *                               pubkey as an argument and returns a pointer to
  *                               the label tweak if the label exists, otherwise
- *                               returns a nullptr (NULL if labels are not
+ *                               returns a NULL pointer (NULL if labels are not
  *                               used)
  *                label_context: pointer to a label context object (NULL if
  *                               labels are not used)
@@ -334,7 +344,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
     const rustsecp256k1_v0_12_xonly_pubkey * const *tx_outputs,
     size_t n_tx_outputs,
     const unsigned char *recipient_scan_key,
-    const rustsecp256k1_v0_12_silentpayments_public_data *public_data,
+    const rustsecp256k1_v0_12_silentpayments_recipient_public_data *public_data,
     const rustsecp256k1_v0_12_pubkey *recipient_spend_pubkey,
     const rustsecp256k1_v0_12_silentpayments_label_lookup label_lookup,
     const void *label_context
@@ -343,8 +353,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
 
 /** Create Silent Payment shared secret.
  *
- *  Given the public input data (rustsecp256k1_v0_12_silentpayments_public_data),
- *  calculate the shared secret.
+ *  Given the public input data (rustsecp256k1_v0_12_silentpayments_recipient_public_data),
+ *  and the recipient's scan key, calculate the shared secret.
  *
  *  The resulting shared secret is needed as input for creating silent payments
  *  outputs belonging to the same recipient scan public key. This function is
@@ -365,7 +375,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_silentpayment
     const rustsecp256k1_v0_12_context *ctx,
     unsigned char *shared_secret33,
     const unsigned char *recipient_scan_key,
-    const rustsecp256k1_v0_12_silentpayments_public_data *public_data
+    const rustsecp256k1_v0_12_silentpayments_recipient_public_data *public_data
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
 
 /** Create Silent Payment output public key.

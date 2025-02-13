@@ -13,7 +13,7 @@ typedef struct {
     rustsecp256k1_v0_12_context *ctx;
     rustsecp256k1_v0_12_pubkey spend_pubkey;
     unsigned char scan_key[32];
-    rustsecp256k1_v0_12_silentpayments_public_data public_data;
+    rustsecp256k1_v0_12_silentpayments_recipient_public_data public_data;
     rustsecp256k1_v0_12_xonly_pubkey tx_outputs[4];
     rustsecp256k1_v0_12_silentpayments_found_output found_outputs[4];
     unsigned char scalar[32];
