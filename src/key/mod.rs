@@ -479,6 +479,7 @@ impl<'de> serde::Deserialize<'de> for PublicKey {
 /// ```
 /// [`bincode`]: https://docs.rs/bincode
 /// [`cbor`]: https://docs.rs/cbor
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Keypair(ffi::Keypair);
 impl_fast_comparisons!(Keypair);
@@ -818,6 +819,7 @@ impl CPtr for Keypair {
 /// ```
 /// [`bincode`]: https://docs.rs/bincode
 /// [`cbor`]: https://docs.rs/cbor
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct XOnlyPublicKey(ffi::XOnlyPublicKey);
 impl_fast_comparisons!(XOnlyPublicKey);
