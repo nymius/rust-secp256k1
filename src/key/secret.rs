@@ -48,6 +48,7 @@ mod encapsulate {
     /// [`bincode`]: https://docs.rs/bincode
     /// [`cbor`]: https://docs.rs/cbor
     /// [cryptographically secure pseudorandom number generator]: https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator
+    #[repr(transparent)]
     #[derive(Copy, Clone)]
     pub struct SecretKey([u8; SECRET_KEY_SIZE]);
     // FIXME these two macro call should be moved outside of the encapsulate module
