@@ -943,6 +943,17 @@ extern "C" {
         prevouts_summary: *const PrevoutsSummary,
         flags: c_uint
     ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_prevouts_summary_parse"
+    )]
+    pub fn secp256k1_silentpayments_recipient_prevouts_summary_parse(
+        ctx: *const Context,
+        prevouts_summary: *mut PrevoutsSummary,
+        input: *const c_uchar,
+        inputlen: size_t,
+    ) -> c_int;
 }
 
 #[repr(C)]
