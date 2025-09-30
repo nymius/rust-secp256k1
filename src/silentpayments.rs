@@ -125,4 +125,27 @@ impl PrevoutsSummary {
             Err(PrevoutsSummaryError::SerializationFailure)
         }
     }
+
+    /// TODO: add docs
+    pub fn parse<C: Verification>(
+        secp: &Secp256k1<C>,
+        input: &[u8],
+    ) -> Result<Self, PrevoutsSummaryError> {
+        let mut prevouts_summary = Self::new();
+
+        let res = unsafe {
+            ffi::secp256k1_silentpayments_recipient_prevouts_summary_parse(
+                secp.ctx().as_ptr(),
+                prevouts_summary.as_mut_c_ptr(),
+                input.as_c_ptr(),
+                input.len(),
+            )
+        };
+
+        if res == 1 {
+            Ok(prevouts_summary)
+        } else {
+            Err(PrevoutsSummaryError::SerializationFailure)
+        }
+    }
 }
