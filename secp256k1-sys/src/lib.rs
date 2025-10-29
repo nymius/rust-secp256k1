@@ -957,13 +957,18 @@ extern "C" {
 
     #[cfg_attr(
         not(rust_secp_no_symbol_renaming),
-        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_labeled_spend_pubkey"
+        link_name = "rustsecp256k1_v0_12_silentpayments_sender_create_outputs"
     )]
-    pub fn secp256k1_silentpayments_recipient_create_labeled_spend_pubkey(
+    pub fn secp256k1_silentpayments_sender_create_outputs(
         ctx: *const Context,
-        labeled_spend_pubkey: *mut PublicKey,
-        unlabeled_spend_pubkey: *const PublicKey,
-        label: *const PublicKey,
+        generated_outputs: *mut *mut XOnlyPublicKey,
+        recipients: *const *mut SilentpaymentsRecipient,
+        n_recipients: size_t,
+        outpoint_smallest36: *const c_uchar,
+        taproot_seckeys: *const *const Keypair,
+        n_taproot_seckeys: size_t,
+        plain_seckeys: *const *const c_uchar,
+        n_plain_seckeys: size_t,
     ) -> c_int;
 
     #[cfg_attr(
@@ -980,18 +985,13 @@ extern "C" {
 
     #[cfg_attr(
         not(rust_secp_no_symbol_renaming),
-        link_name = "rustsecp256k1_v0_12_silentpayments_sender_create_outputs"
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_labeled_spend_pubkey"
     )]
-    pub fn secp256k1_silentpayments_sender_create_outputs(
+    pub fn secp256k1_silentpayments_recipient_create_labeled_spend_pubkey(
         ctx: *const Context,
-        generated_outputs: *mut *mut XOnlyPublicKey,
-        recipients: *const *mut SilentpaymentsRecipient,
-        n_recipients: size_t,
-        outpoint_smallest36: *const c_uchar,
-        taproot_seckeys: *const *const Keypair,
-        n_taproot_seckeys: size_t,
-        plain_seckeys: *const *const c_uchar,
-        n_plain_seckeys: size_t,
+        labeled_spend_pubkey: *mut PublicKey,
+        unlabeled_spend_pubkey: *const PublicKey,
+        label: *const PublicKey,
     ) -> c_int;
 }
 
