@@ -993,6 +993,53 @@ extern "C" {
         unlabeled_spend_pubkey: *const PublicKey,
         label: *const PublicKey,
     ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_scan_outputs"
+    )]
+    pub fn secp256k1_silentpayments_recipient_scan_outputs(
+        ctx: *const Context,
+        found_outputs: *mut *mut FoundOutput,
+        n_found_outputs: *mut size_t,
+        tx_outputs: *const *const XOnlyPublicKey,
+        n_tx_outputs: size_t,
+        scan_key32: *const c_uchar,
+        prevouts_summary: *const PrevoutsSummary,
+        unlabeled_spend_pubkey: *const PublicKey,
+        label_lookup: LabelLookup,
+        label_context: *const c_void,
+    ) -> c_int;
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FoundOutput {
+    output: XOnlyPublicKey,
+    tweak: [c_uchar; 32],
+    found_with_label: c_int,
+    label: PublicKey,
+}
+
+impl FoundOutput {
+    pub fn xonly_pubkey(self) -> XOnlyPublicKey {
+        self.output
+    }
+
+    pub fn tweak(self) -> [u8; 32] {
+        self.tweak
+    }
+}
+
+impl Default for FoundOutput {
+    fn default() -> Self {
+        Self {
+            output: unsafe { XOnlyPublicKey::new() },
+            tweak: [0u8; 32],
+            found_with_label: 0i32,
+            label: unsafe { PublicKey::new() }
+        }
+    }
 }
 
 #[repr(C)]
