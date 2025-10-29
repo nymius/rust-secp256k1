@@ -149,6 +149,40 @@ impl PrevoutsSummary {
             Err(PrevoutsSummaryError::SerializationFailure)
         }
     }
+
+    /// TODO: add docs
+    pub fn create_output_pubkeys<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        scan_key32: &SecretKey,
+        spend_pubkeys: &[&mut PublicKey],
+    ) -> Result<Vec<XOnlyPublicKey>, PrevoutsSummaryError> {
+        unsafe {
+            let mut outputs_xonly = vec![ffi::XOnlyPublicKey::new(); spend_pubkeys.len()];
+            let mut ffi_outputs_xonly =
+                outputs_xonly.iter_mut().map(|k| k as *mut _).collect::<Vec<_>>();
+            let res = ffi::secp256k1_silentpayments_recipient_create_output_pubkeys(
+                secp.ctx().as_ptr(),
+                ffi_outputs_xonly.as_mut_c_ptr(),
+                scan_key32.as_c_ptr(),
+                self.as_c_ptr(),
+                spend_pubkeys.as_c_ptr() as *const *mut ffi::PublicKey,
+                spend_pubkeys.len(),
+            );
+            if res == 1 {
+                let length = outputs_xonly.len();
+                let capacity = outputs_xonly.capacity();
+                let ptr = outputs_xonly.as_mut_ptr();
+
+                // Prevent destruction on drop by original vector
+                forget(outputs_xonly);
+
+                Ok(Vec::from_raw_parts(ptr as *mut XOnlyPublicKey, length, capacity))
+            } else {
+                Err(PrevoutsSummaryError::SerializationFailure)
+            }
+        }
+    }
 }
 
 /// Output scan errors
