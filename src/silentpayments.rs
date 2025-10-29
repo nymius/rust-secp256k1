@@ -1,10 +1,10 @@
 //! TODO
 use crate::{
     constants,
-    ffi::{self, CPtr},
+    ffi::{self, types::c_void, CPtr},
     Keypair, PublicKey, Secp256k1, SecretKey, Verification, XOnlyPublicKey,
 };
-use core::mem::forget;
+use core::{fmt::Write, mem::forget};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -255,5 +255,93 @@ impl SilentpaymentsRecipient {
                 index,
             ))
         }
+    }
+}
+
+/// TODO: add docs
+pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
+    secp: &Secp256k1<C>,
+    tx_outputs: &[&XOnlyPublicKey],
+    scan_key32: &SecretKey,
+    prevouts_summary: &PrevoutsSummary,
+    unlabeled_spend_pubkey: &PublicKey,
+    label_lookup: ffi::LabelLookup,
+    label_context: Option<&L>,
+) -> Result<Vec<FoundOutput>, LabeledSpendPubkeyError> {
+    unsafe {
+        let mut found_outputs = vec![ffi::FoundOutput::default(); tx_outputs.len()];
+        let mut ffi_found_outputs: Vec<_> = found_outputs.iter_mut().map(|k| k as *mut _).collect();
+        let mut n_found_outputs: usize = 0;
+
+        let res = ffi::secp256k1_silentpayments_recipient_scan_outputs(
+            secp.ctx().as_ptr(),
+            ffi_found_outputs.as_mut_c_ptr(),
+            &mut n_found_outputs,
+            tx_outputs.as_c_ptr() as *const *const ffi::XOnlyPublicKey,
+            tx_outputs.len(),
+            scan_key32.to_secret_bytes().as_c_ptr(),
+            prevouts_summary.as_c_ptr(),
+            unlabeled_spend_pubkey.as_c_ptr(),
+            label_lookup,
+            label_context.as_ref().map_or(core::ptr::null(), |x| *x as *const L as *const c_void),
+        );
+
+        if res == 1 {
+            let ptr = found_outputs.as_mut_c_ptr();
+
+            // Prevent destruction on drop by original vector
+            forget(found_outputs);
+
+            Ok(Vec::from_raw_parts(ptr as *mut FoundOutput, n_found_outputs, n_found_outputs))
+        } else {
+            Err(LabeledSpendPubkeyError::CreationFailure)
+        }
+    }
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// TODO: add docs
+pub struct FoundOutput(ffi::FoundOutput);
+
+impl CPtr for FoundOutput {
+    type Target = ffi::FoundOutput;
+
+    /// Obtains a const pointer suitable for use with FFI functions.
+    fn as_c_ptr(&self) -> *const Self::Target {
+        &self.0
+    }
+
+    /// Obtains a mutable pointer suitable for use with FFI functions.
+    fn as_mut_c_ptr(&mut self) -> *mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl FoundOutput {
+    /// TODO
+    pub fn tweak(self) -> [u8; 32] {
+        self.0.tweak()
+    }
+
+    /// TODO
+    pub fn output(self) -> XOnlyPublicKey {
+        self.0.xonly_pubkey().into()
+    }
+}
+
+impl core::fmt::Display for FoundOutput {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let xonly_pubkey = XOnlyPublicKey::from(self.0.xonly_pubkey());
+
+        let buffer_str = xonly_pubkey.serialize().iter().try_fold(
+            String::new(),
+            |mut output, byte| -> Result<_, _> {
+                write!(output, "{byte:02x}")?;
+                Ok(output)
+            },
+        )?;
+
+        write!(f, "{}", buffer_str)
     }
 }
