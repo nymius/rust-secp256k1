@@ -987,6 +987,19 @@ extern "C" {
         label_lookup: LabelLookup,
         label_context: *const c_void,
     ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_output_pubkeys"
+    )]
+    pub fn secp256k1_silentpayments_recipient_create_output_pubkeys(
+        ctx: *const Context,
+        outputs_xonly: *mut *mut XOnlyPublicKey,
+        scan_key32: *const c_uchar,
+        prevouts_summary: *const PrevoutsSummary,
+        spend_pubkeys: *const *mut PublicKey,
+        n_spend_pubkeys: size_t,
+    ) -> c_int;
 }
 
 #[repr(C)]
