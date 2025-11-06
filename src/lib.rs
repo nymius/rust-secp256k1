@@ -177,6 +177,7 @@ pub mod ecdh;
 pub mod ecdsa;
 pub mod ellswift;
 pub mod musig;
+pub mod silentpayments;
 pub mod scalar;
 pub mod schnorr;
 
