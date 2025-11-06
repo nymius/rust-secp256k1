@@ -2,8 +2,9 @@
 use crate::{
     constants,
     ffi::{self, CPtr},
-    PublicKey, Secp256k1, SecretKey, Verification, XOnlyPublicKey,
+    Keypair, PublicKey, Secp256k1, SecretKey, Verification, XOnlyPublicKey,
 };
+use core::mem::forget;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -176,6 +177,83 @@ pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
             Ok(pubkey)
         } else {
             Err(LabeledSpendPubkeyError::CreationFailure)
+        }
+    }
+}
+
+/// TODO: add docs
+pub fn silentpayments_sender_create_outputs<C: Verification>(
+    secp: &Secp256k1<C>,
+    recipients: &[&mut SilentpaymentsRecipient],
+    outpoint_smallest36: &[u8; 36],
+    taproot_seckeys: Option<&[&Keypair]>,
+    plain_seckeys: Option<&[&SecretKey]>,
+) -> Result<Vec<XOnlyPublicKey>, LabeledSpendPubkeyError> {
+    unsafe {
+        let (ffi_taproot_seckeys, n_taproot_seckeys) = match taproot_seckeys {
+            Some(keys) => (keys.as_c_ptr() as *const *const ffi::Keypair, keys.len()),
+            None => (
+                core::ptr::null::<*const *const ffi::Keypair>() as *const *const ffi::Keypair,
+                0_usize,
+            ),
+        };
+
+        let (ffi_plain_seckeys, n_plain_seckeys) = match plain_seckeys {
+            Some(keys) => (
+                keys.iter()
+                    .map(|key| key.to_secret_bytes().as_c_ptr())
+                    .collect::<Vec<*const u8>>()
+                    .as_c_ptr(),
+                keys.len(),
+            ),
+            None => (core::ptr::null::<*const *const u8>() as *const *const u8, 0_usize),
+        };
+
+        let mut generated_outputs = vec![ffi::XOnlyPublicKey::new(); recipients.len()];
+        let mut ffi_generated_outputs =
+            generated_outputs.iter_mut().map(|k| k as *mut _).collect::<Vec<_>>();
+
+        let res = ffi::secp256k1_silentpayments_sender_create_outputs(
+            secp.ctx().as_ptr(),
+            ffi_generated_outputs.as_mut_c_ptr(),
+            recipients.as_c_ptr() as *const *mut ffi::SilentpaymentsRecipient,
+            recipients.len(),
+            outpoint_smallest36.as_c_ptr(),
+            ffi_taproot_seckeys,
+            n_taproot_seckeys,
+            ffi_plain_seckeys,
+            n_plain_seckeys,
+        );
+
+        if res == 1 {
+            let length = generated_outputs.len();
+            let capacity = generated_outputs.capacity();
+            let ptr = generated_outputs.as_mut_ptr();
+
+            // Prevent destruction on drop by original vector
+            forget(generated_outputs);
+
+            Ok(Vec::from_raw_parts(ptr as *mut XOnlyPublicKey, length, capacity))
+        } else {
+            Err(LabeledSpendPubkeyError::CreationFailure)
+        }
+    }
+}
+
+/// Struct to store recipient data
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct SilentpaymentsRecipient(ffi::SilentpaymentsRecipient);
+
+impl SilentpaymentsRecipient {
+    /// Get a new SilentpaymentsRecipient
+    pub fn new(scan_pubkey: &PublicKey, spend_pubkey: &PublicKey, index: usize) -> Self {
+        unsafe {
+            Self(ffi::SilentpaymentsRecipient::new(
+                &*scan_pubkey.as_c_ptr(),
+                &*spend_pubkey.as_c_ptr(),
+                index,
+            ))
         }
     }
 }
