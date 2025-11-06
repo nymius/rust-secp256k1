@@ -88,4 +88,41 @@ impl PrevoutsSummary {
             Err(PrevoutsSummaryError::CreationFailure)
         }
     }
+
+    /// TODO: add docs
+    pub fn serialize<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        compressed: bool,
+    ) -> Result<Vec<u8>, PrevoutsSummaryError> {
+        let (mut output, size, flags) = if compressed {
+            (
+                vec![0u8; constants::PUBLIC_KEY_SIZE],
+                constants::PUBLIC_KEY_SIZE,
+                ffi::SECP256K1_SER_COMPRESSED,
+            )
+        } else {
+            (
+                vec![0u8; constants::UNCOMPRESSED_PUBLIC_KEY_SIZE],
+                constants::UNCOMPRESSED_PUBLIC_KEY_SIZE,
+                ffi::SECP256K1_SER_UNCOMPRESSED,
+            )
+        };
+
+        let res = unsafe {
+            ffi::secp256k1_silentpayments_recipient_prevouts_summary_serialize(
+                secp.ctx().as_ptr(),
+                output.as_mut_c_ptr(),
+                size,
+                self.as_c_ptr(),
+                flags,
+            )
+        };
+
+        if res == 1 {
+            Ok(output)
+        } else {
+            Err(PrevoutsSummaryError::SerializationFailure)
+        }
+    }
 }

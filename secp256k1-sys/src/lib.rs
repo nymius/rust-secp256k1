@@ -931,6 +931,18 @@ extern "C" {
         plain_pubkeys: *const *const PublicKey,
         n_plain_pubkeys: size_t,
     ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_prevouts_summary_serialize"
+    )]
+    pub fn secp256k1_silentpayments_recipient_prevouts_summary_serialize(
+        ctx: *const Context,
+        output: *mut c_uchar,
+        size: size_t,
+        prevouts_summary: *const PrevoutsSummary,
+        flags: c_uint
+    ) -> c_int;
 }
 
 #[repr(C)]
