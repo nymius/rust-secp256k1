@@ -980,6 +980,9 @@ impl core::fmt::Debug for PrevoutsSummary {
     }
 }
 
+pub type LabelLookup =
+    Option<unsafe extern "C" fn(*const c_uchar, *const c_void) -> *const c_uchar>;
+
 #[cfg(not(secp256k1_fuzz))]
 extern "C" {
     // Contexts
