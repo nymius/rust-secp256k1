@@ -2,7 +2,7 @@
 use crate::{
     constants,
     ffi::{self, CPtr},
-    PublicKey, Secp256k1, Verification, XOnlyPublicKey,
+    PublicKey, Secp256k1, SecretKey, Verification, XOnlyPublicKey,
 };
 
 #[repr(transparent)]
@@ -146,6 +146,96 @@ impl PrevoutsSummary {
             Ok(prevouts_summary)
         } else {
             Err(PrevoutsSummaryError::SerializationFailure)
+        }
+    }
+}
+
+/// Output scan errors
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub enum LabeledSpendPubkeyError {
+    /// Failed to create output pubkey
+    CreationFailure,
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for LabeledSpendPubkeyError {}
+
+impl core::fmt::Display for LabeledSpendPubkeyError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        match self {
+            LabeledSpendPubkeyError::CreationFailure => {
+                write!(f, "Failed to create labelled spend pubkey")
+            }
+        }
+    }
+}
+
+/// Label tweak errors
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub enum LabelTweakError {
+    /// Unexpected failures
+    CreationFailure,
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for LabelTweakError {}
+
+impl core::fmt::Display for LabelTweakError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        match self {
+            LabelTweakError::CreationFailure => write!(f, "Failed to create label tweak"),
+        }
+    }
+}
+
+/// TODO: add docs
+pub fn silentpayments_recipient_create_label<C: Verification>(
+    secp: &Secp256k1<C>,
+    scan_key32: &SecretKey,
+    m: u32,
+) -> Result<(PublicKey, [u8; 32]), LabelTweakError> {
+    unsafe {
+        let mut label = ffi::PublicKey::new();
+        let mut label_tweak32 = [0u8; 32];
+
+        let res = ffi::secp256k1_silentpayments_recipient_create_label(
+            secp.ctx().as_ptr(),
+            &mut label,
+            label_tweak32.as_mut_c_ptr(),
+            scan_key32.as_c_ptr(),
+            m,
+        );
+
+        if res == 1 {
+            let label = PublicKey::from(label);
+            Ok((label, label_tweak32))
+        } else {
+            Err(LabelTweakError::CreationFailure)
+        }
+    }
+}
+
+/// TODO: add docs
+pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
+    secp: &Secp256k1<C>,
+    unlabeled_spend_pubkey: &PublicKey,
+    label: &PublicKey,
+) -> Result<PublicKey, LabeledSpendPubkeyError> {
+    unsafe {
+        let mut pubkey = ffi::PublicKey::new();
+
+        let res = ffi::secp256k1_silentpayments_recipient_create_labeled_spend_pubkey(
+            secp.ctx().as_ptr(),
+            &mut pubkey,
+            unlabeled_spend_pubkey.as_c_ptr(),
+            label.as_c_ptr(),
+        );
+
+        if res == 1 {
+            let pubkey = PublicKey::from(pubkey);
+            Ok(pubkey)
+        } else {
+            Err(LabeledSpendPubkeyError::CreationFailure)
         }
     }
 }
