@@ -931,6 +931,29 @@ extern "C" {
         plain_pubkeys: *const *const PublicKey,
         n_plain_pubkeys: size_t,
     ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_labeled_spend_pubkey"
+    )]
+    pub fn secp256k1_silentpayments_recipient_create_labeled_spend_pubkey(
+        ctx: *const Context,
+        labeled_spend_pubkey: *mut PublicKey,
+        unlabeled_spend_pubkey: *const PublicKey,
+        label: *const PublicKey,
+    ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_create_label"
+    )]
+    pub fn secp256k1_silentpayments_recipient_create_label(
+        ctx: *const Context,
+        label: *mut PublicKey,
+        label_tweak32: *mut c_uchar,
+        scan_key32: *const c_uchar,
+        m: c_uint,
+    ) -> c_int;
 }
 
 #[repr(C)]
