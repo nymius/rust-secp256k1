@@ -33,6 +33,9 @@ pub const KEY_PAIR_SIZE: usize = 96;
 /// The size of a full ElligatorSwift encoding.
 pub const ELLSWIFT_ENCODING_SIZE: usize = 64;
 
+/// TODO
+pub const SILENT_PAYMENTS_PREVOUTS_SUMMARY_SIZE: usize = 101;
+
 /// The Prime for the secp256k1 field element.
 #[rustfmt::skip]
 pub const FIELD_SIZE: [u8; 32] = [

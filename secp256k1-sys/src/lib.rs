@@ -917,6 +917,55 @@ extern "C" {
         pubkeys: *mut *const PublicKey,
         n_pubkeys: size_t,
     ) -> c_int;
+
+    #[cfg_attr(
+        not(rust_secp_no_symbol_renaming),
+        link_name = "rustsecp256k1_v0_12_silentpayments_recipient_prevouts_summary_create"
+    )]
+    pub fn secp256k1_silentpayments_recipient_prevouts_summary_create(
+        ctx: *const Context,
+        prevouts_summary: *mut PrevoutsSummary,
+        outpoint_smallest36: *const c_uchar,
+        xonly_pubkeys: *const *const XOnlyPublicKey,
+        n_xonly_pubkeys: size_t,
+        plain_pubkeys: *const *const PublicKey,
+        n_plain_pubkeys: size_t,
+    ) -> c_int;
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PrevoutsSummary {
+    data: [u8; 101]
+}
+
+impl PrevoutsSummary {
+    pub fn from_array(arr: [u8; 101]) -> Self {
+        PrevoutsSummary { data: arr }
+    }
+    pub fn to_array(self) -> [u8; 101] {
+        self.data
+    }
+}
+
+impl core::fmt::Debug for PrevoutsSummary {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "magic: {{")?;
+        for magic_byte in &self.data[..3] {
+            write!(f, "0x{magic_byte:02x}, ")?;
+        };
+        writeln!(f, "0x{:02x}}}", &self.data[3])?;
+        write!(f, "x: 0x")?;
+        for x_byte in &self.data[4..36] {
+            write!(f, "{x_byte:02x}")?;
+        }
+        writeln!(f)?;
+        write!(f, "y: 0x")?;
+        for y_byte in &self.data[36..68] {
+            write!(f, "{y_byte:02x}")?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(not(secp256k1_fuzz))]
