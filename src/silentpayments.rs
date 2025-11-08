@@ -102,21 +102,18 @@ impl PrevoutsSummary {
     }
 }
 
-/// Output scan errors
+/// Failed to create labeled spend pubkey.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub enum LabeledSpendPubkeyError {
-    /// Failed to create output pubkey
-    CreationFailure,
-}
+pub struct LabeledSpendPubkeyCreationError;
 
 #[cfg(feature = "std")]
-impl std::error::Error for LabeledSpendPubkeyError {}
+impl std::error::Error for LabeledSpendPubkeyCreationError {}
 
-impl core::fmt::Display for LabeledSpendPubkeyError {
+impl core::fmt::Display for LabeledSpendPubkeyCreationError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         match self {
-            LabeledSpendPubkeyError::CreationFailure => {
-                write!(f, "Failed to create labelled spend pubkey")
+            LabeledSpendPubkeyCreationError => {
+                write!(f, "Failed to create labeled spend pubkey")
             }
         }
     }
@@ -172,7 +169,7 @@ pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
     secp: &Secp256k1<C>,
     unlabeled_spend_pubkey: &PublicKey,
     label: &PublicKey,
-) -> Result<PublicKey, LabeledSpendPubkeyError> {
+) -> Result<PublicKey, LabeledSpendPubkeyCreationError> {
     unsafe {
         let mut pubkey = ffi::PublicKey::new();
 
@@ -187,7 +184,7 @@ pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
             let pubkey = PublicKey::from(pubkey);
             Ok(pubkey)
         } else {
-            Err(LabeledSpendPubkeyError::CreationFailure)
+            Err(LabeledSpendPubkeyCreationError)
         }
     }
 }
