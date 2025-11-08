@@ -279,7 +279,7 @@ pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
 pub fn silentpayments_sender_create_outputs<C: Verification>(
     secp: &Secp256k1<C>,
     recipients: &[&mut SilentpaymentsRecipient],
-    outpoint_smallest36: &[u8; 36],
+    lexmin_outpoint: &[u8; 36],
     taproot_seckeys: Option<&[&Keypair]>,
     plain_seckeys: Option<&[&SecretKey]>,
 ) -> Result<Vec<XOnlyPublicKey>, LabeledSpendPubkeyError> {
@@ -312,7 +312,7 @@ pub fn silentpayments_sender_create_outputs<C: Verification>(
             ffi_generated_outputs.as_mut_c_ptr(),
             recipients.as_c_ptr() as *const *mut ffi::SilentpaymentsRecipient,
             recipients.len(),
-            outpoint_smallest36.as_c_ptr(),
+            lexmin_outpoint.as_c_ptr(),
             ffi_taproot_seckeys,
             n_taproot_seckeys,
             ffi_plain_seckeys,
