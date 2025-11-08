@@ -4,7 +4,7 @@ use crate::{
     ffi::{self, types::c_void, CPtr},
     Keypair, PublicKey, Secp256k1, SecretKey, Verification, XOnlyPublicKey,
 };
-use core::{fmt::Write, mem::forget};
+use core::mem::forget;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
