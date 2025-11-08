@@ -25,17 +25,15 @@ impl CPtr for PrevoutsSummary {
     }
 }
 
-/// Label tweak errors
+/// PrevoutsSummary errors.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub enum PrevoutsSummaryError {
-    /// Failed to create the public data
+    /// Failed to create the prevouts summary.
     CreationFailure,
-    /// Serialization Failure
-    SerializationFailure,
-    /// Parse Failure
+    /// Failed to parse the serialized prevout summary.
     ParseFailure,
-    /// Failed to create the shared secret
-    SharedSecretFailure,
+    /// Failed to create the output pubkeys.
+    OutputCreationFailure,
 }
 
 impl PrevoutsSummary {
