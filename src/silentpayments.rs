@@ -23,9 +23,9 @@ use crate::{
 };
 use core::mem::forget;
 
+/// Struct to store silent payments prevouts summary data.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// TODO: Docs
 pub struct PrevoutsSummary(ffi::PrevoutsSummary);
 
 impl CPtr for PrevoutsSummary {
@@ -67,13 +67,51 @@ impl core::fmt::Display for PrevoutsSummaryError {
 }
 
 impl PrevoutsSummary {
+    /// Allocate an empty [`PrevoutsSummary`] for other methods to write.
     fn new() -> Self {
         Self(ffi::PrevoutsSummary::from_array(
             [0u8; constants::SILENT_PAYMENTS_PREVOUTS_SUMMARY_SIZE],
         ))
     }
 
-    /// TODO: add docs
+    /// Create [`PrevoutsSummary`] from prevout public keys and transaction inputs.
+    ///
+    /// Given a list of n public keys A_1...A_n (one for each silent payment eligible input to
+    /// spend) and a serialized `lexmin_outpoint`, create a `prevouts_summary` object. This object
+    /// summarizes the prevout data from the transaction inputs needed for scanning.
+    ///
+    /// `lexmin_outpoint` refers to the smallest outpoint lexicographically
+    /// from the transaction inputs (both silent payments eligible and non-eligible
+    /// inputs). This value MUST be the smallest outpoint out of ALL of the
+    /// transaction inputs, otherwise the recipient will be unable to find the
+    /// payment.
+    ///
+    /// The public keys have to be passed in via two different parameter pairs, one
+    /// for regular and one for x-only public keys, in order to avoid the need of
+    /// users converting to a common public key format before calling this function.
+    /// The resulting data can be used for scanning on the recipient side, or
+    /// stored in an index for later use (e.g., wallet rescanning, sending data to
+    /// light clients).
+    ///
+    /// If calling this function for simply aggregating the public transaction data
+    /// for later use, the caller can save the result with [`PrevoutsSummary::serialize`].
+    ///
+    /// # Arguments
+    /// * `secp` - a secp256k1 verification engine.
+    /// * `lexmin_outpoint` - serialized smallest outpoint (lexicographically)
+    ///   from the transaction inputs.
+    /// * `xonly_pubkeys` - pointer to an array of pointers to taproot x-only
+    ///   public keys (can be [`Option::None`] if no taproot inputs are used).
+    /// * `plain_pubkeys` - pointer to an array of pointers to non-taproot
+    ///   public keys (can be [`Option::None`] if no non-taproot inputs are used).
+    ///
+    /// # Returns
+    /// A [`PrevoutsSummary`] struct, containing the summed public keys and the input hash.
+    ///
+    /// # Errors
+    /// * [`PrevoutsSummaryError::CreationFailure] - the prevout summary could not be created
+    ///   because arguments are invalid or transaction is not a silent payment transaction (no inputs
+    ///   for shared secret derivation).
     pub fn create<C: Verification>(
         secp: &Secp256k1<C>,
         lexmin_outpoint: &[u8; 36],
