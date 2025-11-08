@@ -1005,20 +1005,10 @@ extern "C" {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FoundOutput {
-    output: XOnlyPublicKey,
-    tweak: [c_uchar; 32],
-    found_with_label: c_int,
-    label: PublicKey,
-}
-
-impl FoundOutput {
-    pub fn xonly_pubkey(self) -> XOnlyPublicKey {
-        self.output
-    }
-
-    pub fn tweak(self) -> [u8; 32] {
-        self.tweak
-    }
+    pub output: XOnlyPublicKey,
+    pub tweak: [c_uchar; 32],
+    pub found_with_label: c_int,
+    pub label: PublicKey,
 }
 
 impl Default for FoundOutput {
