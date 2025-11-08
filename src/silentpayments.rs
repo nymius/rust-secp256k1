@@ -504,9 +504,9 @@ pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
     }
 }
 
+/// Struct for holding a found output along with data needed to spend it later.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// TODO: add docs
 pub struct FoundOutput(ffi::FoundOutput);
 
 impl CPtr for FoundOutput {
@@ -524,16 +524,18 @@ impl CPtr for FoundOutput {
 }
 
 impl FoundOutput {
-    /// TODO
+    /// The 32-byte tweak needed to spend the output.
     pub fn tweak(self) -> [u8; 32] {
         self.0.tweak
     }
 
-    /// TODO
+    /// The x-only public key for the taproot output.
     pub fn output(self) -> XOnlyPublicKey {
         self.0.output.into()
     }
 
+    /// If this outputs was sent to a labeled addres, a public key representing the label used,
+    /// [`Option::None`] otherwise.
     pub fn label(self) -> Option<PublicKey> {
         if self.0.found_with_label != 0 {
             Some(self.0.label.into())
