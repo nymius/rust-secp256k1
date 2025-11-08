@@ -164,8 +164,7 @@ fn main() -> anyhow::Result<()> {
             &SMALLEST_OUTPOINT,
             Some(&sender_keypairs),
             None,
-        )
-        .unwrap();
+        )?;
 
         assert_eq!(tx_outputs.len(), N_OUTPUTS);
 
@@ -184,10 +183,9 @@ fn main() -> anyhow::Result<()> {
     {
         let input33 = {
             let prevouts_summary =
-                PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)
-                    .unwrap();
+                PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
 
-            let light_client_data33 = prevouts_summary.serialize(&secp, true).unwrap();
+            let light_client_data33 = prevouts_summary.serialize(&secp, true);
 
             let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
@@ -224,10 +222,9 @@ fn main() -> anyhow::Result<()> {
             let spend_pubkeys = [&mut unlabeled_spend_pubkey];
             let carol_scan_key = SecretKey::from_secret_bytes(CAROL_SCAN_KEY)?;
 
-            let prevouts_summary = PrevoutsSummary::parse(&secp, &input33).unwrap();
-            let potential_outputs = prevouts_summary
-                .create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys)
-                .unwrap();
+            let prevouts_summary = PrevoutsSummary::parse(&secp, &input33)?;
+            let potential_outputs =
+                prevouts_summary.create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys)?;
             let mut found: u32 = 0;
             for tx_output in tx_outputs.iter() {
                 if *tx_output == potential_outputs[0] {
