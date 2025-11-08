@@ -370,7 +370,27 @@ pub fn silentpayments_recipient_create_label<C: Verification>(
     }
 }
 
-/// TODO: add docs
+/// Create Silent Payment labeled spend public key.
+///
+/// Given a recipient's spend public key and a label, calculate the
+/// corresponding labeled spend public key:
+///
+///     labeled_spend_pubkey = unlabeled_spend_pubkey + label
+///
+/// The result is used by the recipient to create a Silent Payment address,
+/// consisting of the serialized and concatenated scan public key and
+/// (labeled) spend public key.
+///
+/// # Arguments:
+/// * `secp` - a secp256k1 verification engine.
+/// * `unlabeled_spend_pubkey` - the recipient's unlabeled spend public key to label.
+/// * `label` - the recipient's label public key.
+///
+/// # Returns
+/// The resulting labeled [`PublicKey`].
+///
+/// # Errors
+/// * [`LabeledSpendPubkeyCreationError`] - if spend pubkey and label sum to zero (negligible probability for labels created according to BIP352).
 pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
     secp: &Secp256k1<C>,
     unlabeled_spend_pubkey: &PublicKey,
