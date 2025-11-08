@@ -189,7 +189,25 @@ impl core::fmt::Display for LabelTweakCreationError {
     }
 }
 
-/// TODO: add docs
+/// Create Silent Payment label tweak and label.
+///
+/// Given a recipient's scan [`SecretKey`] and a label integer m, calculate the
+/// corresponding label tweak and label:
+///
+///     label_tweak = hash(scan_key || m)
+///           label = label_tweak * G
+///
+/// # Arguments
+/// * `secp` - a secp256k1 verification engine.
+/// * `scan_seckey` - the recipient's scan [`SecretKey`].
+/// * `m` - a label integer for the m-th label (0 is used for change outputs).
+///
+/// # Returns
+/// A tuple ([`PublicKey`], [u8; 32]) where the first element is the label public key and the
+/// second is the label tweak.
+///
+/// # Errors
+/// * [`LabelTweakCreationError`] - if label tweak is not a valid scalar (negligible probability per hash evaluation).
 pub fn silentpayments_recipient_create_label<C: Verification>(
     secp: &Secp256k1<C>,
     scan_seckey: &SecretKey,
