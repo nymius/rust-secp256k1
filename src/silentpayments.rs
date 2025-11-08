@@ -356,7 +356,7 @@ impl SilentpaymentsRecipient {
 pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
     secp: &Secp256k1<C>,
     tx_outputs: &[&XOnlyPublicKey],
-    scan_key32: &SecretKey,
+    scan_seckey: &SecretKey,
     prevouts_summary: &PrevoutsSummary,
     unlabeled_spend_pubkey: &PublicKey,
     label_lookup: ffi::LabelLookup,
@@ -373,7 +373,7 @@ pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
             &mut n_found_outputs,
             tx_outputs.as_c_ptr() as *const *const ffi::XOnlyPublicKey,
             tx_outputs.len(),
-            scan_key32.to_secret_bytes().as_c_ptr(),
+            scan_seckey.to_secret_bytes().as_c_ptr(),
             prevouts_summary.as_c_ptr(),
             unlabeled_spend_pubkey.as_c_ptr(),
             label_lookup,
