@@ -533,13 +533,13 @@ pub fn silentpayments_sender_create_outputs<C: Verification>(
     }
 }
 
-/// Struct to store recipient data
+/// Struct to store recipient data.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct SilentpaymentsRecipient(ffi::SilentpaymentsRecipient);
 
 impl SilentpaymentsRecipient {
-    /// Get a new SilentpaymentsRecipient
+    /// Get a new [`SilentpaymentsRecipient`]
     pub fn new(scan_pubkey: &PublicKey, spend_pubkey: &PublicKey, index: usize) -> Self {
         unsafe {
             Self(ffi::SilentpaymentsRecipient::new(
