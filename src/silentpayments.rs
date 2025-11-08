@@ -119,20 +119,17 @@ impl core::fmt::Display for LabeledSpendPubkeyCreationError {
     }
 }
 
-/// Label tweak errors
+/// Error creating label tweak.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub enum LabelTweakError {
-    /// Unexpected failures
-    CreationFailure,
-}
+pub struct LabelTweakCreationError;
 
 #[cfg(feature = "std")]
-impl std::error::Error for LabelTweakError {}
+impl std::error::Error for LabelTweakCreationError {}
 
-impl core::fmt::Display for LabelTweakError {
+impl core::fmt::Display for LabelTweakCreationError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         match self {
-            LabelTweakError::CreationFailure => write!(f, "Failed to create label tweak"),
+            LabelTweakCreationError => write!(f, "Failed to create label tweak"),
         }
     }
 }
@@ -142,7 +139,7 @@ pub fn silentpayments_recipient_create_label<C: Verification>(
     secp: &Secp256k1<C>,
     scan_seckey: &SecretKey,
     m: u32,
-) -> Result<(PublicKey, [u8; 32]), LabelTweakError> {
+) -> Result<(PublicKey, [u8; 32]), LabelTweakCreationError> {
     unsafe {
         let mut label = ffi::PublicKey::new();
         let mut label_tweak32 = [0u8; 32];
@@ -159,7 +156,7 @@ pub fn silentpayments_recipient_create_label<C: Verification>(
             let label = PublicKey::from(label);
             Ok((label, label_tweak32))
         } else {
-            Err(LabelTweakError::CreationFailure)
+            Err(LabelTweakCreationError)
         }
     }
 }
