@@ -232,7 +232,33 @@ impl PrevoutsSummary {
         }
     }
 
-    /// TODO: add docs
+    /// Create Silent Payment output public keys.
+    ///
+    /// Given a scan key, a [`PrevoutsSummary`], and array of recipient spend public keys,
+    /// create the silent payments output public keys.
+    ///
+    /// This function is used by the recipient when scanning for outputs without
+    /// access to the transaction outputs (e.g., using BIP158 block filters). It will
+    /// create an output (the first output) for each of the spend public keys provided.
+    ///
+    /// **It is the caller's responsibility to determine if the created outputs exist.**
+    ///
+    /// If a match is found, the caller must download the full transaction and call
+    /// [`silentpayments_recipient_scan_outputs`] to check if there are additional outputs
+    /// for the recipient and get the full output tweak needed to spend the outputs.
+    ///
+    /// # Aruments
+    /// * `secp` - a secp256k1 verification engine.
+    /// * `scan_seckey` - the recipient scanning [`SecretKey`].
+    /// * `spend_pubkeys` - slice with the recipient's spend [`PublicKey`]s (labeled or unlabeled).
+    ///
+    /// # Returns
+    /// A vector with the resulting output [`XOnlyPublicKey`]s. Its size should be equal to the size of the
+    /// spend_pubkeys slice.
+    ///
+    /// # Errors
+    /// * [`PrevoutsSummaryError::OutputCreationFailure`] - if the transaction is not a silent
+    ///   payment transacion.
     pub fn create_output_pubkeys<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
