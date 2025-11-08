@@ -273,6 +273,21 @@ pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
     }
 }
 
+/// Error creating silent payment ouput x-only public keys.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct SilentpaymentDerivationError;
+
+#[cfg(feature = "std")]
+impl std::error::Error for SilentpaymentDerivationError {}
+
+impl core::fmt::Display for SilentpaymentDerivationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        match self {
+            SilentpaymentDerivationError => write!(f, "Failed while deriving silent payment output x-only public keys"),
+        }
+    }
+}
+
 /// TODO: add docs
 pub fn silentpayments_sender_create_outputs<C: Verification>(
     secp: &Secp256k1<C>,
@@ -280,7 +295,7 @@ pub fn silentpayments_sender_create_outputs<C: Verification>(
     lexmin_outpoint: &[u8; 36],
     taproot_seckeys: Option<&[&Keypair]>,
     plain_seckeys: Option<&[&SecretKey]>,
-) -> Result<Vec<XOnlyPublicKey>, LabeledSpendPubkeyError> {
+) -> Result<Vec<XOnlyPublicKey>, SilentpaymentDerivationError> {
     unsafe {
         let (ffi_taproot_seckeys, n_taproot_seckeys) = match taproot_seckeys {
             Some(keys) => (keys.as_c_ptr() as *const *const ffi::Keypair, keys.len()),
@@ -327,7 +342,7 @@ pub fn silentpayments_sender_create_outputs<C: Verification>(
 
             Ok(Vec::from_raw_parts(ptr as *mut XOnlyPublicKey, length, capacity))
         } else {
-            Err(LabeledSpendPubkeyError::CreationFailure)
+            Err(SilentpaymentDerivationError)
         }
     }
 }
