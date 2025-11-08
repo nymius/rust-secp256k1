@@ -154,7 +154,7 @@ impl PrevoutsSummary {
     pub fn create_output_pubkeys<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
-        scan_key32: &SecretKey,
+        scan_seckey: &SecretKey,
         spend_pubkeys: &[&mut PublicKey],
     ) -> Result<Vec<XOnlyPublicKey>, PrevoutsSummaryError> {
         unsafe {
@@ -164,7 +164,7 @@ impl PrevoutsSummary {
             let res = ffi::secp256k1_silentpayments_recipient_create_output_pubkeys(
                 secp.ctx().as_ptr(),
                 ffi_outputs_xonly.as_mut_c_ptr(),
-                scan_key32.as_c_ptr(),
+                scan_seckey.as_c_ptr(),
                 self.as_c_ptr(),
                 spend_pubkeys.as_c_ptr() as *const *mut ffi::PublicKey,
                 spend_pubkeys.len(),
