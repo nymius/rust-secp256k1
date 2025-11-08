@@ -294,7 +294,51 @@ impl core::fmt::Display for SilentpaymentDerivationError {
     }
 }
 
-/// TODO: add docs
+/// Create Silent Payment outputs for recipient(s).
+///
+/// Given a list of n secret keys a_1...a_n (one for each silent payment
+/// eligible input to spend), a serialized outpoint, and a list of recipients,
+/// create the taproot outputs. Inputs with conditional branches or multiple
+/// public keys are excluded from silent payments eligible inputs; see BIP352
+/// for more information.
+///
+/// `lexmin_outpoint` refers to the smallest outpoint lexicographically
+/// from the transaction inputs (both silent payments eligible and non-eligible
+/// inputs). This value MUST be the smallest outpoint out of ALL of the
+/// transaction inputs, otherwise the recipient will be unable to find the
+/// payment. Determining the smallest outpoint from the list of transaction
+/// inputs is the responsibility of the caller. It is strongly recommended
+/// that implementations ensure they are doing this correctly by using the
+/// test vectors from BIP352.
+///
+/// When creating more than one generated output, all of the generated outputs
+/// MUST be included in the final transaction. Dropping any of the generated
+/// outputs from the final transaction may make all or some of the outputs
+/// unfindable by the recipient.
+///
+/// # Arguments
+/// * `secp` - a secp256k1 verification engine.
+/// * `recipients` - slice of [`SilentpaymentsRecipient`] mutable references. The index indicates
+///   its position in the original ordering. The recipients will be grouped by scan public key in
+///   place (as specified in BIP0352), but generated outputs are saved in the `generated_outputs`
+///   array to match the original ordering (using the index field). This ensures the caller is able
+///   to match the generated outputs to the correct silent payment addresses. The same recipient can
+///   be passed multiple times to create multiple outputs for the same recipient.
+/// * `lexmin_outpoint` - serialized (36-byte) smallest outpoint (lexicographically) from the transaction inputs
+/// * `taproot_seckeys` - optionally a slice of [`Keypair`] references of taproot inputs.
+/// * `plain_seckeys` - optionally a slice of [`SecretKey`] references of non-taproot inputs.
+///
+/// # Returns
+/// A vector to xonly public keys, one per recipient. Outputs are ordered to match the original
+/// ordering of the recipient objects, i.e., the vector element zero is the generated output for
+/// the [`SilentpaymentsRecipient`] struct with index = 0.
+///
+/// # Errors
+/// * [`SilentpaymentDerivationError`] - This is expected only with an adversarially chosen
+///   recipient spend key. Specifically, failure occurs when:
+///   - Input secret keys sum to 0 or the negation of a spend key (negligible probability if at least
+///     one of the input secret keys is uniformly random and independent of all other keys).
+///   - A hash output is not a valid scalar (negligible probability per hash evaluation).
 pub fn silentpayments_sender_create_outputs<C: Verification>(
     secp: &Secp256k1<C>,
     recipients: &[&mut SilentpaymentsRecipient],
