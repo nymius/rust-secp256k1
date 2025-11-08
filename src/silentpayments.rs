@@ -91,11 +91,7 @@ impl PrevoutsSummary {
     }
 
     /// TODO: add docs
-    pub fn serialize<C: Verification>(
-        &self,
-        secp: &Secp256k1<C>,
-        compressed: bool,
-    ) -> Result<Vec<u8>, PrevoutsSummaryError> {
+    pub fn serialize<C: Verification>(&self, secp: &Secp256k1<C>, compressed: bool) -> Vec<u8> {
         let (mut output, size, flags) = if compressed {
             (
                 vec![0u8; constants::PUBLIC_KEY_SIZE],
@@ -110,7 +106,8 @@ impl PrevoutsSummary {
             )
         };
 
-        let res = unsafe {
+        // Do not check return type, as it can only return 1
+        let _res = unsafe {
             ffi::secp256k1_silentpayments_recipient_prevouts_summary_serialize(
                 secp.ctx().as_ptr(),
                 output.as_mut_c_ptr(),
@@ -120,11 +117,7 @@ impl PrevoutsSummary {
             )
         };
 
-        if res == 1 {
-            Ok(output)
-        } else {
-            Err(PrevoutsSummaryError::SerializationFailure)
-        }
+        output
     }
 
     /// TODO: add docs
