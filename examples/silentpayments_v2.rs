@@ -164,8 +164,7 @@ fn main() -> anyhow::Result<()> {
             &SMALLEST_OUTPOINT,
             Some(&sender_keypairs),
             None,
-        )
-        .unwrap();
+        )?;
 
         assert_eq!(tx_outputs.len(), N_OUTPUTS);
 
