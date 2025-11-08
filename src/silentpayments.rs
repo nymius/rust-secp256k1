@@ -132,7 +132,7 @@ impl core::fmt::Display for LabelTweakError {
 /// TODO: add docs
 pub fn silentpayments_recipient_create_label<C: Verification>(
     secp: &Secp256k1<C>,
-    scan_key32: &SecretKey,
+    scan_seckey: &SecretKey,
     m: u32,
 ) -> Result<(PublicKey, [u8; 32]), LabelTweakError> {
     unsafe {
@@ -143,7 +143,7 @@ pub fn silentpayments_recipient_create_label<C: Verification>(
             secp.ctx().as_ptr(),
             &mut label,
             label_tweak32.as_mut_c_ptr(),
-            scan_key32.as_c_ptr(),
+            scan_seckey.as_c_ptr(),
             m,
         );
 
