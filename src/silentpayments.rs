@@ -415,27 +415,25 @@ impl CPtr for FoundOutput {
 impl FoundOutput {
     /// TODO
     pub fn tweak(self) -> [u8; 32] {
-        self.0.tweak()
+        self.0.tweak
     }
 
     /// TODO
     pub fn output(self) -> XOnlyPublicKey {
-        self.0.xonly_pubkey().into()
+        self.0.output.into()
+    }
+
+    pub fn label(self) -> Option<PublicKey> {
+        if self.0.found_with_label != 0 {
+            Some(self.0.label.into())
+        } else {
+            None
+        }
     }
 }
 
 impl core::fmt::Display for FoundOutput {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let xonly_pubkey = XOnlyPublicKey::from(self.0.xonly_pubkey());
-
-        let buffer_str = xonly_pubkey.serialize().iter().try_fold(
-            String::new(),
-            |mut output, byte| -> Result<_, _> {
-                write!(output, "{byte:02x}")?;
-                Ok(output)
-            },
-        )?;
-
-        write!(f, "{}", buffer_str)
+        write!(f, "{}", self.output())
     }
 }
