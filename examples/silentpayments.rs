@@ -124,8 +124,8 @@ fn main() -> anyhow::Result<()> {
 
     let mut recipients = Vec::<SilentpaymentsRecipient>::new();
     for (index, [scan_pubkey, spend_pubkey]) in sp_addresses.iter().enumerate() {
-        let scan_pubkey = PublicKey::from_slice(scan_pubkey).unwrap();
-        let spend_pubkey = PublicKey::from_slice(spend_pubkey).unwrap();
+        let scan_pubkey = PublicKey::from_slice(scan_pubkey)?;
+        let spend_pubkey = PublicKey::from_slice(spend_pubkey)?;
 
         let silentpayment_recipient =
             SilentpaymentsRecipient::new(&scan_pubkey, &spend_pubkey, index);
@@ -142,7 +142,7 @@ fn main() -> anyhow::Result<()> {
     for &key in SENDER_SECRET_KEYS.iter() {
         let seckey: [u8; 32] = key;
 
-        let keypair = Keypair::from_seckey_byte_array(seckey).unwrap();
+        let keypair = Keypair::from_seckey_byte_array(seckey)?;
 
         taproot_seckeys.push(keypair);
 
@@ -157,8 +157,7 @@ fn main() -> anyhow::Result<()> {
         &SMALLEST_OUTPOINT,
         Some(&taproot_seckeys),
         None,
-    )
-    .unwrap();
+    )?;
 
     println!("Alice created the following outputs for Bob and Carol:");
     for (i, xonly_pubkey) in tx_outputs.iter().enumerate() {
@@ -166,23 +165,22 @@ fn main() -> anyhow::Result<()> {
     }
     println!();
 
-    let bob_scan_seckey = SecretKey::from_secret_bytes(BOB_SCAN_SECKEY).unwrap();
+    let bob_scan_seckey = SecretKey::from_secret_bytes(BOB_SCAN_SECKEY)?;
     let m: u32 = 1;
 
     let (label, label_tweak32) =
-        silentpayments_recipient_create_label(&secp, &bob_scan_seckey, m).unwrap();
+        silentpayments_recipient_create_label(&secp, &bob_scan_seckey, m)?;
 
-    let bob_spend_pubkey = PublicKey::from_slice(&BOB_SPEND_PUBKEY).unwrap();
+    let bob_spend_pubkey = PublicKey::from_slice(&BOB_SPEND_PUBKEY)?;
 
     let _labeled_spend_pubkey =
-        silentpayments_recipient_create_labeled_spend_pubkey(&secp, &bob_spend_pubkey, &label)
-            .unwrap();
+        silentpayments_recipient_create_labeled_spend_pubkey(&secp, &bob_spend_pubkey, &label)?;
 
     let tx_inputs_ref: Vec<&XOnlyPublicKey> = tx_inputs.iter().collect();
     let tx_inputs_ref = tx_inputs_ref.as_slice();
 
     let public_data: PrevoutsSummary =
-        PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(tx_inputs_ref), None).unwrap();
+        PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(tx_inputs_ref), None)?;
 
     let mut tweak_map = HashMap::<[u8; 33], [u8; 32]>::new();
 
@@ -206,8 +204,7 @@ fn main() -> anyhow::Result<()> {
         &bob_spend_pubkey,
         Some(label_lookup),
         Some(&tweak_map),
-    )
-    .unwrap();
+    )?;
 
     if !found_outputs.is_empty() {
         println!("Bob found the following outputs:");
@@ -219,18 +216,18 @@ fn main() -> anyhow::Result<()> {
         println!("Bob did not find any outputs in this transaction.\n");
     }
 
-    let input33 = public_data.serialize(&secp, true).unwrap();
+    let input33 = public_data.serialize(&secp, true);
 
-    let prevouts_summary = PrevoutsSummary::parse(&secp, &input33).unwrap();
+    let prevouts_summary = PrevoutsSummary::parse(&secp, &input33)?;
 
-    let carol_scan_key = SecretKey::from_secret_bytes(CAROL_SCAN_KEY).unwrap();
+    let carol_scan_key = SecretKey::from_secret_bytes(CAROL_SCAN_KEY)?;
 
-    let mut carol_spend_pubkey = PublicKey::from_slice(&CAROL_ADDRESS[1]).unwrap();
+    let mut carol_spend_pubkey = PublicKey::from_slice(&CAROL_ADDRESS[1])?;
 
     let spend_pubkeys = [&mut carol_spend_pubkey];
 
     let potential_output =
-        prevouts_summary.create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys).unwrap();
+        prevouts_summary.create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys)?;
 
     let mut found: bool = false;
 
