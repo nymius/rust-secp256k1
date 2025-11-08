@@ -278,6 +278,21 @@ impl SilentpaymentsRecipient {
     }
 }
 
+/// Error while scanning silent payment outputs
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct SilentpaymentScanningError;
+
+#[cfg(feature = "std")]
+impl std::error::Error for SilentpaymentScanningError {}
+
+impl core::fmt::Display for SilentpaymentScanningError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+        match self {
+            SilentpaymentScanningError => write!(f, "Failed while scanning silent payment outputs"),
+        }
+    }
+}
+
 /// TODO: add docs
 pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
     secp: &Secp256k1<C>,
@@ -287,7 +302,7 @@ pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
     unlabeled_spend_pubkey: &PublicKey,
     label_lookup: ffi::LabelLookup,
     label_context: Option<&L>,
-) -> Result<Vec<FoundOutput>, LabeledSpendPubkeyError> {
+) -> Result<Vec<FoundOutput>, SilentpaymentScanningError> {
     unsafe {
         let mut found_outputs = vec![ffi::FoundOutput::default(); tx_outputs.len()];
         let mut ffi_found_outputs: Vec<_> = found_outputs.iter_mut().map(|k| k as *mut _).collect();
@@ -314,7 +329,7 @@ pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
 
             Ok(Vec::from_raw_parts(ptr as *mut FoundOutput, n_found_outputs, n_found_outputs))
         } else {
-            Err(LabeledSpendPubkeyError::CreationFailure)
+            Err(SilentpaymentScanningError)
         }
     }
 }
