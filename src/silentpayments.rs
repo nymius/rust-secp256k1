@@ -156,7 +156,20 @@ impl PrevoutsSummary {
         }
     }
 
-    /// TODO: add docs
+    /// Serialize a [`PrevoutsSummary`] struct into a 33-byte or 65-byte sequence.
+    ///
+    /// Serializing a prevouts_summary object created with [`PrevoutsSummary::create`] will result in
+    /// an EC multiplication. This allows for a more compact serialization, but also means a serialized
+    /// [`PrevoutsSummary`] will not parse back to a the same [`PrevoutsSummary`] struct (due to the EC multiplication).
+    ///
+    /// This function does not error because [`PrevoutsSummary`] is assumed valid after creation.
+    ///
+    /// # Arguments
+    /// * `secp` - a secp256k1 verification engine.
+    /// * `compressed` - a boolean indicating the preferred serialization output size.
+    ///
+    /// # Returns
+    /// A byte vector with the serialized [`PrevoutsSummary`] in.
     pub fn serialize<C: Verification>(&self, secp: &Secp256k1<C>, compressed: bool) -> Vec<u8> {
         let (mut output, size, flags) = if compressed {
             (
