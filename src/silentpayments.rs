@@ -199,7 +199,17 @@ impl PrevoutsSummary {
         output
     }
 
-    /// TODO: add docs
+    /// Parse a 33-byte or 65-byte sequence into a [`PrevoutsSummary`] struct.
+    ///
+    /// # Arguments:
+    /// * `secp` - a secp256k1 verification engine.
+    /// * `input` - a 33-byte or 65-byte slice.
+    ///
+    /// # Returns:
+    /// A [`PrevoutsSummary`] struct if successful.
+    ///
+    /// # Errors:
+    /// * [`PrevoutsSummaryError::ParseFailure`] if the slice could not be parsed.
     pub fn parse<C: Verification>(
         secp: &Secp256k1<C>,
         input: &[u8],
