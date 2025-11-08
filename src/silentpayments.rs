@@ -48,7 +48,7 @@ impl PrevoutsSummary {
     /// TODO: add docs
     pub fn create<C: Verification>(
         secp: &Secp256k1<C>,
-        outpoint_smallest36: &[u8; 36],
+        lexmin_outpoint: &[u8; 36],
         xonly_pubkeys: Option<&[&XOnlyPublicKey]>,
         plain_pubkeys: Option<&[&PublicKey]>,
     ) -> Result<Self, PrevoutsSummaryError> {
@@ -75,7 +75,7 @@ impl PrevoutsSummary {
             ffi::secp256k1_silentpayments_recipient_prevouts_summary_create(
                 secp.ctx().as_ptr(),
                 prevouts_summary.as_mut_c_ptr(),
-                outpoint_smallest36.as_c_ptr(),
+                lexmin_outpoint.as_c_ptr(),
                 ffi_xonly_pubkeys,
                 n_xonly_pubkeys,
                 ffi_plain_pubkeys,
