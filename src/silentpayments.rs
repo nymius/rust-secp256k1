@@ -566,7 +566,40 @@ impl core::fmt::Display for SilentpaymentScanningError {
     }
 }
 
-/// TODO: add docs
+/// Scan for Silent Payment transaction outputs.
+///
+/// Given a [`PrevoutsSummary`] object, a recipient's scan [`SecretKey`] and unlabeled spend
+/// [`PublicKey`], and the relevant transaction outputs, scan for outputs belonging to the
+/// recipient and return the tweak(s) needed for spending the output(s). An optional
+/// [`ffi::LabelLookup`] callback function and `label_context` can be passed if the recipient uses labels.
+/// This allows for checking if a label exists in the recipients label cache and retrieving the
+/// label tweak during scanning.
+///
+/// If used, the `label_lookup` function must return a pointer to a 32-byte label
+/// tweak if the label is found, or NULL otherwise. The returned pointer must remain
+/// valid until the next call to `label_lookup` or until the function returns,
+/// whichever comes first. It is not retained beyond that.
+///
+/// For creating the labels cache, [`silentpayments_recipient_create_label`] can be used.
+///
+/// # Arguments
+/// * `secp` - a secp256k1 verification engine.
+/// * `tx_outputs` -  a slice of references to the transactions x-only public keys.
+/// * `scan_seckey` - the recipient's [`SecretKey`].
+/// * `prevouts_summary` - a reference to the transaction [`PrevoutsSummary`].
+/// * `unlabeled_spend_pubkey` - a reference to the recipient's unlabeled spend [`PublicKey`].
+/// * `label_lookup` - a pointer to a callback function for looking up label values. This function
+///   takes a label public key as an argument and returns a pointer to the label tweak if it exists,
+///   otherwise returns a NULL pointer. Should be [`Option::None`] if labels are not used.
+/// * `label_context` - optionally a reference to a label context struct. [`Option::None`] if
+///   labels are not used or context is not needed by label_lookup .
+///
+/// # Returns
+/// A vector of [`FoundOutput`]s.
+///
+/// # Errors
+/// * [`SilentpaymentScanningError`] - if the transaction is not a valid silent payment transaction
+///   or the arguments are invalid.
 pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
     secp: &Secp256k1<C>,
     tx_outputs: &[&XOnlyPublicKey],
