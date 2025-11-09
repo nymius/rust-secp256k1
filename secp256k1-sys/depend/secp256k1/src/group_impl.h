@@ -195,6 +195,44 @@ static void rustsecp256k1_v0_12_ge_set_gej_var(rustsecp256k1_v0_12_ge *r, rustse
     SECP256K1_GE_VERIFY(r);
 }
 
+static void rustsecp256k1_v0_12_ge_set_all_gej(rustsecp256k1_v0_12_ge *r, const rustsecp256k1_v0_12_gej *a, size_t len) {
+    rustsecp256k1_v0_12_fe u;
+    size_t i;
+#ifdef VERIFY
+    for (i = 0; i < len; i++) {
+        SECP256K1_GEJ_VERIFY(&a[i]);
+        VERIFY_CHECK(!rustsecp256k1_v0_12_gej_is_infinity(&a[i]));
+    }
+#endif
+
+    if (len == 0) {
+        return;
+    }
+
+    /* Use destination's x coordinates as scratch space */
+    r[0].x = a[0].z;
+    for (i = 1; i < len; i++) {
+        rustsecp256k1_v0_12_fe_mul(&r[i].x, &r[i - 1].x, &a[i].z);
+    }
+    rustsecp256k1_v0_12_fe_inv(&u, &r[len - 1].x);
+
+    for (i = len - 1; i > 0; i--) {
+        rustsecp256k1_v0_12_fe_mul(&r[i].x, &r[i - 1].x, &u);
+        rustsecp256k1_v0_12_fe_mul(&u, &u, &a[i].z);
+    }
+    r[0].x = u;
+
+    for (i = 0; i < len; i++) {
+        rustsecp256k1_v0_12_ge_set_gej_zinv(&r[i], &a[i], &r[i].x);
+    }
+
+#ifdef VERIFY
+    for (i = 0; i < len; i++) {
+        SECP256K1_GE_VERIFY(&r[i]);
+    }
+#endif
+}
+
 static void rustsecp256k1_v0_12_ge_set_all_gej_var(rustsecp256k1_v0_12_ge *r, const rustsecp256k1_v0_12_gej *a, size_t len) {
     rustsecp256k1_v0_12_fe u;
     size_t i;
@@ -299,11 +337,11 @@ static void rustsecp256k1_v0_12_ge_set_infinity(rustsecp256k1_v0_12_ge *r) {
 }
 
 static void rustsecp256k1_v0_12_gej_clear(rustsecp256k1_v0_12_gej *r) {
-    rustsecp256k1_v0_12_memclear(r, sizeof(rustsecp256k1_v0_12_gej));
+    rustsecp256k1_v0_12_memclear_explicit(r, sizeof(rustsecp256k1_v0_12_gej));
 }
 
 static void rustsecp256k1_v0_12_ge_clear(rustsecp256k1_v0_12_ge *r) {
-    rustsecp256k1_v0_12_memclear(r, sizeof(rustsecp256k1_v0_12_ge));
+    rustsecp256k1_v0_12_memclear_explicit(r, sizeof(rustsecp256k1_v0_12_ge));
 }
 
 static int rustsecp256k1_v0_12_ge_set_xo_var(rustsecp256k1_v0_12_ge *r, const rustsecp256k1_v0_12_fe *x, int odd) {

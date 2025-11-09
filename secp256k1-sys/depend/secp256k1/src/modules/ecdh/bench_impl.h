@@ -10,7 +10,7 @@
 #include "../../../include/secp256k1_ecdh.h"
 
 typedef struct {
-    rustsecp256k1_v0_12_context *ctx;
+    const rustsecp256k1_v0_12_context *ctx;
     rustsecp256k1_v0_12_pubkey point;
     unsigned char scalar[32];
 } bench_ecdh_data;
@@ -46,12 +46,9 @@ static void run_ecdh_bench(int iters, int argc, char** argv) {
     bench_ecdh_data data;
     int d = argc == 1;
 
-    /* create a context with no capabilities */
-    data.ctx = rustsecp256k1_v0_12_context_create(SECP256K1_FLAGS_TYPE_CONTEXT);
+    data.ctx = rustsecp256k1_v0_12_context_static;
 
     if (d || have_flag(argc, argv, "ecdh")) run_benchmark("ecdh", bench_ecdh, bench_ecdh_setup, NULL, &data, 10, iters);
-
-    rustsecp256k1_v0_12_context_destroy(data.ctx);
 }
 
 #endif /* SECP256K1_MODULE_ECDH_BENCH_H */

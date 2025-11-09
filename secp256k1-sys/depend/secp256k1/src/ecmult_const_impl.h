@@ -373,6 +373,8 @@ static int rustsecp256k1_v0_12_ecmult_const_xonly(rustsecp256k1_v0_12_fe* r, con
         }
     }
 
+    SECP256K1_FE_VERIFY_MAGNITUDE(&g, 2);
+
     /* Compute base point P = (n*g, g^2), the effective affine version of (n*g, g^2, v), which has
      * corresponding affine X coordinate n/d. */
     rustsecp256k1_v0_12_fe_mul(&p.x, &g, n);

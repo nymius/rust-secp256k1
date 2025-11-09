@@ -92,7 +92,17 @@ SECP256K1_API int rustsecp256k1_v0_12_ecdsa_sign_recoverable(
 
 /** Recover an ECDSA public key from a signature.
  *
- *  Returns: 1: public key successfully recovered (which guarantees a correct signature).
+ *  Successful public key recovery guarantees that the signature, after normalization,
+ *  passes `rustsecp256k1_v0_12_ecdsa_verify`. Thus, explicit verification is not necessary.
+ *
+ *  However, a recoverable signature that successfully passes `rustsecp256k1_v0_12_ecdsa_recover`,
+ *  when converted to a non-recoverable signature (using
+ *  `rustsecp256k1_v0_12_ecdsa_recoverable_signature_convert`), is not guaranteed to be
+ *  normalized and thus not guaranteed to pass `rustsecp256k1_v0_12_ecdsa_verify`. If a
+ *  normalized signature is required, call `rustsecp256k1_v0_12_ecdsa_signature_normalize`
+ *  after `rustsecp256k1_v0_12_ecdsa_recoverable_signature_convert`.
+ *
+ *  Returns: 1: public key successfully recovered
  *           0: otherwise.
  *  Args:    ctx:       pointer to a context object.
  *  Out:     pubkey:    pointer to the recovered public key.

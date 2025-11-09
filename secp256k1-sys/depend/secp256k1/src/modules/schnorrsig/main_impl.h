@@ -94,6 +94,8 @@ static int nonce_function_bip340(unsigned char *nonce32, const unsigned char *ms
     rustsecp256k1_v0_12_sha256_write(&sha, msg, msglen);
     rustsecp256k1_v0_12_sha256_finalize(&sha, nonce32);
     rustsecp256k1_v0_12_sha256_clear(&sha);
+    rustsecp256k1_v0_12_memclear_explicit(masked_key, sizeof(masked_key));
+
     return 1;
 }
 
@@ -137,7 +139,7 @@ static int rustsecp256k1_v0_12_schnorrsig_sign_internal(const rustsecp256k1_v0_1
     rustsecp256k1_v0_12_gej rj;
     rustsecp256k1_v0_12_ge pk;
     rustsecp256k1_v0_12_ge r;
-    unsigned char buf[32] = { 0 };
+    unsigned char nonce32[32] = { 0 };
     unsigned char pk_buf[32];
     unsigned char seckey[32];
     int ret = 1;
@@ -162,8 +164,8 @@ static int rustsecp256k1_v0_12_schnorrsig_sign_internal(const rustsecp256k1_v0_1
 
     rustsecp256k1_v0_12_scalar_get_b32(seckey, &sk);
     rustsecp256k1_v0_12_fe_get_b32(pk_buf, &pk.x);
-    ret &= !!noncefp(buf, msg, msglen, seckey, pk_buf, bip340_algo, sizeof(bip340_algo), ndata);
-    rustsecp256k1_v0_12_scalar_set_b32(&k, buf, NULL);
+    ret &= !!noncefp(nonce32, msg, msglen, seckey, pk_buf, bip340_algo, sizeof(bip340_algo), ndata);
+    rustsecp256k1_v0_12_scalar_set_b32(&k, nonce32, NULL);
     ret &= !rustsecp256k1_v0_12_scalar_is_zero(&k);
     rustsecp256k1_v0_12_scalar_cmov(&k, &rustsecp256k1_v0_12_scalar_one, !ret);
 
@@ -188,7 +190,8 @@ static int rustsecp256k1_v0_12_schnorrsig_sign_internal(const rustsecp256k1_v0_1
     rustsecp256k1_v0_12_memczero(sig64, 64, !ret);
     rustsecp256k1_v0_12_scalar_clear(&k);
     rustsecp256k1_v0_12_scalar_clear(&sk);
-    rustsecp256k1_v0_12_memclear(seckey, sizeof(seckey));
+    rustsecp256k1_v0_12_memclear_explicit(seckey, sizeof(seckey));
+    rustsecp256k1_v0_12_memclear_explicit(nonce32, sizeof(nonce32));
     rustsecp256k1_v0_12_gej_clear(&rj);
 
     return ret;
