@@ -19,7 +19,7 @@
 #endif
 
 SECP256K1_INLINE static void rustsecp256k1_v0_12_fe_clear(rustsecp256k1_v0_12_fe *a) {
-    rustsecp256k1_v0_12_memclear(a, sizeof(rustsecp256k1_v0_12_fe));
+    rustsecp256k1_v0_12_memclear_explicit(a, sizeof(rustsecp256k1_v0_12_fe));
 }
 
 SECP256K1_INLINE static int rustsecp256k1_v0_12_fe_equal(const rustsecp256k1_v0_12_fe *a, const rustsecp256k1_v0_12_fe *b) {

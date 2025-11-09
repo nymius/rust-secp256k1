@@ -5,6 +5,7 @@
  ***********************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../include/secp256k1.h"
@@ -15,16 +16,24 @@ static void help(int default_iters) {
     printf("Benchmarks the following algorithms:\n");
     printf("    - ECDSA signing/verification\n");
 
-#ifdef ENABLE_MODULE_ECDH
-    printf("    - ECDH key exchange (optional module)\n");
-#endif
-
 #ifdef ENABLE_MODULE_RECOVERY
     printf("    - Public key recovery (optional module)\n");
 #endif
 
+#ifdef ENABLE_MODULE_ECDH
+    printf("    - ECDH key exchange (optional module)\n");
+#endif
+
 #ifdef ENABLE_MODULE_SCHNORRSIG
     printf("    - Schnorr signatures (optional module)\n");
+#endif
+
+#ifdef ENABLE_MODULE_ELLSWIFT
+    printf("    - ElligatorSwift (optional module)\n");
+#endif
+
+#ifdef ENABLE_MODULE_SILENTPAYMENTS
+    printf("    - Silent payments (optional module)\n");
 #endif
 
     printf("\n");
@@ -34,33 +43,40 @@ static void help(int default_iters) {
     printf("Usage: ./bench [args]\n");
     printf("By default, all benchmarks will be run.\n");
     printf("args:\n");
-    printf("    help              : display this help and exit\n");
-    printf("    ecdsa             : all ECDSA algorithms--sign, verify, recovery (if enabled)\n");
-    printf("    ecdsa_sign        : ECDSA siging algorithm\n");
-    printf("    ecdsa_verify      : ECDSA verification algorithm\n");
-    printf("    ec                : all EC public key algorithms (keygen)\n");
-    printf("    ec_keygen         : EC public key generation\n");
+    printf("    help                                 : display this help and exit\n");
+    printf("    ecdsa                                : all ECDSA algorithms--sign, verify, recovery (if enabled)\n");
+    printf("    ecdsa_sign                           : ECDSA siging algorithm\n");
+    printf("    ecdsa_verify                         : ECDSA verification algorithm\n");
+    printf("    ec                                   : all EC public key algorithms (keygen)\n");
+    printf("    ec_keygen                            : EC public key generation\n");
 
 #ifdef ENABLE_MODULE_RECOVERY
-    printf("    ecdsa_recover     : ECDSA public key recovery algorithm\n");
+    printf("    ecdsa_recover                        : ECDSA public key recovery algorithm\n");
 #endif
 
 #ifdef ENABLE_MODULE_ECDH
-    printf("    ecdh              : ECDH key exchange algorithm\n");
+    printf("    ecdh                                 : ECDH key exchange algorithm\n");
 #endif
 
 #ifdef ENABLE_MODULE_SCHNORRSIG
-    printf("    schnorrsig        : all Schnorr signature algorithms (sign, verify)\n");
-    printf("    schnorrsig_sign   : Schnorr sigining algorithm\n");
-    printf("    schnorrsig_verify : Schnorr verification algorithm\n");
+    printf("    schnorrsig                           : all Schnorr signature algorithms (sign, verify)\n");
+    printf("    schnorrsig_sign                      : Schnorr sigining algorithm\n");
+    printf("    schnorrsig_verify                    : Schnorr verification algorithm\n");
 #endif
 
 #ifdef ENABLE_MODULE_ELLSWIFT
-    printf("    ellswift          : all ElligatorSwift benchmarks (encode, decode, keygen, ecdh)\n");
-    printf("    ellswift_encode   : ElligatorSwift encoding\n");
-    printf("    ellswift_decode   : ElligatorSwift decoding\n");
-    printf("    ellswift_keygen   : ElligatorSwift key generation\n");
-    printf("    ellswift_ecdh     : ECDH on ElligatorSwift keys\n");
+    printf("    ellswift                             : all ElligatorSwift benchmarks (encode, decode, keygen, ecdh)\n");
+    printf("    ellswift_encode                      : ElligatorSwift encoding\n");
+    printf("    ellswift_decode                      : ElligatorSwift decoding\n");
+    printf("    ellswift_keygen                      : ElligatorSwift key generation\n");
+    printf("    ellswift_ecdh                        : ECDH on ElligatorSwift keys\n");
+#endif
+
+#ifdef ENABLE_MODULE_SILENTPAYMENTS
+    printf("    silentpayments                       : all Silent payments benchmarks (full_scan, full_scan_with_labels, output_scan)\n");
+    printf("    silentpayments_full_scan             : Silent payments full transaction scanning\n");
+    printf("    silentpayments_full_scan_with_labels : Silent payments full transaction scanning with labels\n");
+    printf("    silentpayments_output_scan           : Silent payments scan on a single output (e.g., light client)\n");
 #endif
 
     printf("\n");
@@ -165,6 +181,10 @@ static void bench_keygen_run(void *arg, int iters) {
 # include "modules/ellswift/bench_impl.h"
 #endif
 
+#ifdef ENABLE_MODULE_SILENTPAYMENTS
+# include "modules/silentpayments/bench_impl.h"
+#endif
+
 int main(int argc, char** argv) {
     int i;
     rustsecp256k1_v0_12_pubkey pubkey;
@@ -179,7 +199,8 @@ int main(int argc, char** argv) {
     char* valid_args[] = {"ecdsa", "verify", "ecdsa_verify", "sign", "ecdsa_sign", "ecdh", "recover",
                          "ecdsa_recover", "schnorrsig", "schnorrsig_verify", "schnorrsig_sign", "ec",
                          "keygen", "ec_keygen", "ellswift", "encode", "ellswift_encode", "decode",
-                         "ellswift_decode", "ellswift_keygen", "ellswift_ecdh"};
+                         "ellswift_decode", "ellswift_keygen", "ellswift_ecdh", "silentpayments",
+                         "silentpayments_output_scan", "silentpayments_full_scan", "silentpayments_full_scan_with_labels"};
     size_t valid_args_size = sizeof(valid_args)/sizeof(valid_args[0]);
     int invalid_args = have_invalid_args(argc, argv, valid_args, valid_args_size);
 
@@ -188,11 +209,11 @@ int main(int argc, char** argv) {
            || have_flag(argc, argv, "--help")
            || have_flag(argc, argv, "help")) {
             help(default_iters);
-            return 0;
+            return EXIT_SUCCESS;
         } else if (invalid_args) {
             fprintf(stderr, "./bench: unrecognized argument.\n\n");
             help(default_iters);
-            return 1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -201,7 +222,7 @@ int main(int argc, char** argv) {
     if (have_flag(argc, argv, "ecdh")) {
         fprintf(stderr, "./bench: ECDH module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-ecdh.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -209,7 +230,7 @@ int main(int argc, char** argv) {
     if (have_flag(argc, argv, "recover") || have_flag(argc, argv, "ecdsa_recover")) {
         fprintf(stderr, "./bench: Public key recovery module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-recovery.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -217,7 +238,7 @@ int main(int argc, char** argv) {
     if (have_flag(argc, argv, "schnorrsig") || have_flag(argc, argv, "schnorrsig_sign") || have_flag(argc, argv, "schnorrsig_verify")) {
         fprintf(stderr, "./bench: Schnorr signatures module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-schnorrsig.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -227,7 +248,16 @@ int main(int argc, char** argv) {
         have_flag(argc, argv, "ellswift_ecdh")) {
         fprintf(stderr, "./bench: ElligatorSwift module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-ellswift.\n\n");
-        return 1;
+        return EXIT_FAILURE;
+    }
+#endif
+
+#ifndef ENABLE_MODULE_SILENTPAYMENTS
+    if (have_flag(argc, argv, "silentpayments") || have_flag(argc, argv, "silentpayments_full_scan") ||
+        have_flag(argc, argv, "silentpayments_full_scan_with_labels") || have_flag(argc, argv, "silentpayments_output_scan")) {
+        fprintf(stderr, "./bench: silentpayments module not enabled.\n");
+        fprintf(stderr, "Use ./configure --enable-module-silentpayments.\n\n");
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -275,5 +305,11 @@ int main(int argc, char** argv) {
     run_ellswift_bench(iters, argc, argv);
 #endif
 
-    return 0;
+#ifdef ENABLE_MODULE_SILENTPAYMENTS
+    /* SilentPayments benchmarks */
+    run_silentpayments_bench(iters, argc, argv);
+#endif
+
+
+    return EXIT_SUCCESS;
 }
