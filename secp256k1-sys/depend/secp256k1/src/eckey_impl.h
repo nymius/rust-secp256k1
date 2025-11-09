@@ -9,6 +9,7 @@
 
 #include "eckey.h"
 
+#include "util.h"
 #include "scalar.h"
 #include "field.h"
 #include "group.h"
@@ -35,6 +36,8 @@ static int rustsecp256k1_v0_12_eckey_pubkey_parse(rustsecp256k1_v0_12_ge *elem, 
 }
 
 static int rustsecp256k1_v0_12_eckey_pubkey_serialize(rustsecp256k1_v0_12_ge *elem, unsigned char *pub, size_t *size, int compressed) {
+    VERIFY_CHECK(compressed == 0 || compressed == 1);
+
     if (rustsecp256k1_v0_12_ge_is_infinity(elem)) {
         return 0;
     }

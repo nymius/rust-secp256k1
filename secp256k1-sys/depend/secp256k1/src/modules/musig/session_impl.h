@@ -385,16 +385,17 @@ static void rustsecp256k1_v0_12_nonce_function_musig(rustsecp256k1_v0_12_scalar 
         rustsecp256k1_v0_12_scalar_set_b32(&k[i], buf, NULL);
 
         /* Attempt to erase secret data */
-        rustsecp256k1_v0_12_memclear(buf, sizeof(buf));
+        rustsecp256k1_v0_12_memclear_explicit(buf, sizeof(buf));
         rustsecp256k1_v0_12_sha256_clear(&sha_tmp);
     }
-    rustsecp256k1_v0_12_memclear(rand, sizeof(rand));
+    rustsecp256k1_v0_12_memclear_explicit(rand, sizeof(rand));
     rustsecp256k1_v0_12_sha256_clear(&sha);
 }
 
 static int rustsecp256k1_v0_12_musig_nonce_gen_internal(const rustsecp256k1_v0_12_context* ctx, rustsecp256k1_v0_12_musig_secnonce *secnonce, rustsecp256k1_v0_12_musig_pubnonce *pubnonce, const unsigned char *input_nonce, const unsigned char *seckey, const rustsecp256k1_v0_12_pubkey *pubkey, const unsigned char *msg32, const rustsecp256k1_v0_12_musig_keyagg_cache *keyagg_cache, const unsigned char *extra_input32) {
     rustsecp256k1_v0_12_scalar k[2];
     rustsecp256k1_v0_12_ge nonce_pts[2];
+    rustsecp256k1_v0_12_gej nonce_ptj[2];
     int i;
     unsigned char pk_ser[33];
     size_t pk_ser_len = sizeof(pk_ser);
@@ -444,13 +445,20 @@ static int rustsecp256k1_v0_12_musig_nonce_gen_internal(const rustsecp256k1_v0_1
     rustsecp256k1_v0_12_musig_secnonce_save(secnonce, k, &pk);
     rustsecp256k1_v0_12_musig_secnonce_invalidate(ctx, secnonce, !ret);
 
+    /* Compute pubnonce as two gejs */
     for (i = 0; i < 2; i++) {
-        rustsecp256k1_v0_12_gej nonce_ptj;
-        rustsecp256k1_v0_12_ecmult_gen(&ctx->ecmult_gen_ctx, &nonce_ptj, &k[i]);
-        rustsecp256k1_v0_12_ge_set_gej(&nonce_pts[i], &nonce_ptj);
-        rustsecp256k1_v0_12_declassify(ctx, &nonce_pts[i], sizeof(nonce_pts[i]));
+        rustsecp256k1_v0_12_ecmult_gen(&ctx->ecmult_gen_ctx, &nonce_ptj[i], &k[i]);
         rustsecp256k1_v0_12_scalar_clear(&k[i]);
-        rustsecp256k1_v0_12_gej_clear(&nonce_ptj);
+    }
+
+    /* Batch convert to two public ges */
+    rustsecp256k1_v0_12_ge_set_all_gej(nonce_pts, nonce_ptj, 2);
+    for (i = 0; i < 2; i++) {
+        rustsecp256k1_v0_12_gej_clear(&nonce_ptj[i]);
+    }
+
+    for (i = 0; i < 2; i++) {
+        rustsecp256k1_v0_12_declassify(ctx, &nonce_pts[i], sizeof(nonce_pts[i]));
     }
     /* None of the nonce_pts will be infinity because k != 0 with overwhelming
      * probability */
@@ -510,7 +518,7 @@ int rustsecp256k1_v0_12_musig_nonce_gen_counter(const rustsecp256k1_v0_12_contex
     if (!rustsecp256k1_v0_12_musig_nonce_gen_internal(ctx, secnonce, pubnonce, buf, seckey, &pubkey, msg32, keyagg_cache, extra_input32)) {
         return 0;
     }
-    rustsecp256k1_v0_12_memclear(seckey, sizeof(seckey));
+    rustsecp256k1_v0_12_memclear_explicit(seckey, sizeof(seckey));
     return 1;
 }
 
@@ -671,7 +679,7 @@ int rustsecp256k1_v0_12_musig_partial_sign(const rustsecp256k1_v0_12_context* ct
     ret = rustsecp256k1_v0_12_musig_secnonce_load(ctx, k, &pk, secnonce);
     /* Set nonce to zero to avoid nonce reuse. This will cause subsequent calls
      * of this function to fail */
-    memset(secnonce, 0, sizeof(*secnonce));
+    rustsecp256k1_v0_12_memzero_explicit(secnonce, sizeof(*secnonce));
     if (!ret) {
         rustsecp256k1_v0_12_musig_partial_sign_clear(&sk, k);
         return 0;

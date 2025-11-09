@@ -582,7 +582,7 @@ int rustsecp256k1_v0_12_ellswift_xdh(const rustsecp256k1_v0_12_context *ctx, uns
     /* Invoke hasher */
     ret = hashfp(output, sx, ell_a64, ell_b64, data);
 
-    rustsecp256k1_v0_12_memclear(sx, sizeof(sx));
+    rustsecp256k1_v0_12_memclear_explicit(sx, sizeof(sx));
     rustsecp256k1_v0_12_fe_clear(&px);
     rustsecp256k1_v0_12_scalar_clear(&s);
 

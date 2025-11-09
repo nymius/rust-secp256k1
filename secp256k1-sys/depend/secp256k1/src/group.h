@@ -80,7 +80,11 @@ static void rustsecp256k1_v0_12_ge_set_gej(rustsecp256k1_v0_12_ge *r, rustsecp25
 /** Set a group element equal to another which is given in jacobian coordinates. */
 static void rustsecp256k1_v0_12_ge_set_gej_var(rustsecp256k1_v0_12_ge *r, rustsecp256k1_v0_12_gej *a);
 
-/** Set a batch of group elements equal to the inputs given in jacobian coordinates */
+/** Set group elements r[0:len] (affine) equal to group elements a[0:len] (jacobian).
+ * None of the group elements in a[0:len] may be infinity. Constant time. */
+static void rustsecp256k1_v0_12_ge_set_all_gej(rustsecp256k1_v0_12_ge *r, const rustsecp256k1_v0_12_gej *a, size_t len);
+
+/** Set group elements r[0:len] (affine) equal to group elements a[0:len] (jacobian). */
 static void rustsecp256k1_v0_12_ge_set_all_gej_var(rustsecp256k1_v0_12_ge *r, const rustsecp256k1_v0_12_gej *a, size_t len);
 
 /** Bring a batch of inputs to the same global z "denominator", based on ratios between

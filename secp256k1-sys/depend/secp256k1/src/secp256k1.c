@@ -71,8 +71,8 @@ static const rustsecp256k1_v0_12_context rustsecp256k1_v0_12_context_static_ = {
     { rustsecp256k1_v0_12_default_error_callback_fn, 0 },
     0
 };
-const rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_static = &rustsecp256k1_v0_12_context_static_;
-const rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_no_precomp = &rustsecp256k1_v0_12_context_static_;
+const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_static = &rustsecp256k1_v0_12_context_static_;
+const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_no_precomp = &rustsecp256k1_v0_12_context_static_;
 
 /* Helper function that determines if a context is proper, i.e., is not the static context or a copy thereof.
  *
@@ -234,7 +234,7 @@ int rustsecp256k1_v0_12_ec_pubkey_serialize(const rustsecp256k1_v0_12_context* c
     ARG_CHECK(pubkey != NULL);
     ARG_CHECK((flags & SECP256K1_FLAGS_TYPE_MASK) == SECP256K1_FLAGS_TYPE_COMPRESSION);
     if (rustsecp256k1_v0_12_pubkey_load(ctx, &Q, pubkey)) {
-        ret = rustsecp256k1_v0_12_eckey_pubkey_serialize(&Q, output, &len, flags & SECP256K1_FLAGS_BIT_COMPRESSION);
+        ret = rustsecp256k1_v0_12_eckey_pubkey_serialize(&Q, output, &len, !!(flags & SECP256K1_FLAGS_BIT_COMPRESSION));
         if (ret) {
             *outputlen = len;
         }
@@ -453,7 +453,7 @@ static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *m
    }
    rustsecp256k1_v0_12_rfc6979_hmac_sha256_finalize(&rng);
 
-   rustsecp256k1_v0_12_memclear(keydata, sizeof(keydata));
+   rustsecp256k1_v0_12_memclear_explicit(keydata, sizeof(keydata));
    rustsecp256k1_v0_12_rfc6979_hmac_sha256_clear(&rng);
    return 1;
 }
@@ -504,7 +504,7 @@ static int rustsecp256k1_v0_12_ecdsa_sign_inner(const rustsecp256k1_v0_12_contex
      * seckey. As a result is_sec_valid is included in ret only after ret was
      * used as a branching variable. */
     ret &= is_sec_valid;
-    rustsecp256k1_v0_12_memclear(nonce32, sizeof(nonce32));
+    rustsecp256k1_v0_12_memclear_explicit(nonce32, sizeof(nonce32));
     rustsecp256k1_v0_12_scalar_clear(&msg);
     rustsecp256k1_v0_12_scalar_clear(&non);
     rustsecp256k1_v0_12_scalar_clear(&sec);
@@ -588,10 +588,6 @@ int rustsecp256k1_v0_12_ec_seckey_negate(const rustsecp256k1_v0_12_context* ctx,
     return ret;
 }
 
-int rustsecp256k1_v0_12_ec_privkey_negate(const rustsecp256k1_v0_12_context* ctx, unsigned char *seckey) {
-    return rustsecp256k1_v0_12_ec_seckey_negate(ctx, seckey);
-}
-
 int rustsecp256k1_v0_12_ec_pubkey_negate(const rustsecp256k1_v0_12_context* ctx, rustsecp256k1_v0_12_pubkey *pubkey) {
     int ret = 0;
     rustsecp256k1_v0_12_ge p;
@@ -633,10 +629,6 @@ int rustsecp256k1_v0_12_ec_seckey_tweak_add(const rustsecp256k1_v0_12_context* c
 
     rustsecp256k1_v0_12_scalar_clear(&sec);
     return ret;
-}
-
-int rustsecp256k1_v0_12_ec_privkey_tweak_add(const rustsecp256k1_v0_12_context* ctx, unsigned char *seckey, const unsigned char *tweak32) {
-    return rustsecp256k1_v0_12_ec_seckey_tweak_add(ctx, seckey, tweak32);
 }
 
 static int rustsecp256k1_v0_12_ec_pubkey_tweak_add_helper(rustsecp256k1_v0_12_ge *p, const unsigned char *tweak32) {
@@ -681,10 +673,6 @@ int rustsecp256k1_v0_12_ec_seckey_tweak_mul(const rustsecp256k1_v0_12_context* c
     rustsecp256k1_v0_12_scalar_clear(&sec);
     rustsecp256k1_v0_12_scalar_clear(&factor);
     return ret;
-}
-
-int rustsecp256k1_v0_12_ec_privkey_tweak_mul(const rustsecp256k1_v0_12_context* ctx, unsigned char *seckey, const unsigned char *tweak32) {
-    return rustsecp256k1_v0_12_ec_seckey_tweak_mul(ctx, seckey, tweak32);
 }
 
 int rustsecp256k1_v0_12_ec_pubkey_tweak_mul(const rustsecp256k1_v0_12_context* ctx, rustsecp256k1_v0_12_pubkey *pubkey, const unsigned char *tweak32) {
@@ -782,4 +770,8 @@ int rustsecp256k1_v0_12_tagged_sha256(const rustsecp256k1_v0_12_context* ctx, un
 
 #ifdef ENABLE_MODULE_ELLSWIFT
 # include "modules/ellswift/main_impl.h"
+#endif
+
+#ifdef ENABLE_MODULE_SILENTPAYMENTS
+# include "modules/silentpayments/main_impl.h"
 #endif

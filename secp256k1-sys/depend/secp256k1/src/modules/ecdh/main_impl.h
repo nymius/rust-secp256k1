@@ -62,8 +62,8 @@ int rustsecp256k1_v0_12_ecdh(const rustsecp256k1_v0_12_context* ctx, unsigned ch
 
     ret = hashfp(output, x, y, data);
 
-    rustsecp256k1_v0_12_memclear(x, sizeof(x));
-    rustsecp256k1_v0_12_memclear(y, sizeof(y));
+    rustsecp256k1_v0_12_memclear_explicit(x, sizeof(x));
+    rustsecp256k1_v0_12_memclear_explicit(y, sizeof(y));
     rustsecp256k1_v0_12_scalar_clear(&s);
     rustsecp256k1_v0_12_ge_clear(&pt);
     rustsecp256k1_v0_12_gej_clear(&res);

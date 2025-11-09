@@ -121,45 +121,57 @@ typedef int (*rustsecp256k1_v0_12_nonce_function)(
 #endif
 
 /* Symbol visibility. */
-#if defined(_WIN32)
-  /* GCC for Windows (e.g., MinGW) accepts the __declspec syntax
-   * for MSVC compatibility. A __declspec declaration implies (but is not
-   * exactly equivalent to) __attribute__ ((visibility("default"))), and so we
-   * actually want __declspec even on GCC, see "Microsoft Windows Function
-   * Attributes" in the GCC manual and the recommendations in
-   * https://gcc.gnu.org/wiki/Visibility. */
-# if defined(SECP256K1_BUILD)
-#  if defined(DLL_EXPORT) || defined(SECP256K1_DLL_EXPORT)
-    /* Building libsecp256k1 as a DLL.
-     * 1. If using Libtool, it defines DLL_EXPORT automatically.
-     * 2. In other cases, SECP256K1_DLL_EXPORT must be defined. */
-#   define SECP256K1_API extern __declspec (dllexport)
-#  else
-    /* Building libsecp256k1 as a static library on Windows.
-     * No declspec is needed, and so we would want the non-Windows-specific
-     * logic below take care of this case. However, this may result in setting
-     * __attribute__ ((visibility("default"))), which is supposed to be a noop
-     * on Windows but may trigger warnings when compiling with -flto due to a
-     * bug in GCC, see
-     * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=116478 . */
-#   define SECP256K1_API extern
-#  endif
-  /* The user must define SECP256K1_STATIC when consuming libsecp256k1 as a static
-   * library on Windows. */
-# elif !defined(SECP256K1_STATIC)
-   /* Consuming libsecp256k1 as a DLL. */
-#  define SECP256K1_API extern __declspec (dllimport)
-# endif
+#if !defined(SECP256K1_API) && defined(SECP256K1_NO_API_VISIBILITY_ATTRIBUTES)
+     /* The user has requested that we don't specify visibility attributes in
+      * the public API.
+      *
+      * Since all our non-API declarations use the static qualifier, this means
+      * that the user can use -fvisibility=<value> to set the visibility of the
+      * API symbols. For instance, -fvisibility=hidden can be useful *even for
+      * the API symbols*, e.g., when building a static library which is linked
+      * into a shared library, and the latter should not re-export the
+      * libsecp256k1 API.
+      *
+      * While visibility is a concept that applies only to shared libraries,
+      * setting visibility will still make a difference when building a static
+      * library: the visibility settings will be stored in the static library,
+      * solely for the potential case that the static library will be linked into
+      * a shared library. In that case, the stored visibility settings will
+      * resurface and be honored for the shared library. */
+#    define SECP256K1_API extern
 #endif
-#ifndef SECP256K1_API
-/* All cases not captured by the Windows-specific logic. */
-# if defined(__GNUC__) && (__GNUC__ >= 4) && defined(SECP256K1_BUILD)
-   /* Building libsecp256k1 using GCC or compatible. */
-#  define SECP256K1_API extern __attribute__ ((visibility ("default")))
-# else
-   /* Fall back to standard C's extern. */
-#  define SECP256K1_API extern
-# endif
+#if !defined(SECP256K1_API)
+#    if defined(SECP256K1_BUILD)
+         /* On Windows, assume a shared library only if explicitly requested.
+          *   1. If using Libtool, it defines DLL_EXPORT automatically.
+          *   2. In other cases, SECP256K1_DLL_EXPORT must be defined. */
+#        if defined(_WIN32) && (defined(SECP256K1_DLL_EXPORT) || defined(DLL_EXPORT))
+             /* GCC for Windows (e.g., MinGW) accepts the __declspec syntax for
+              * MSVC compatibility. A __declspec declaration implies (but is not
+              * exactly equivalent to) __attribute__ ((visibility("default"))),
+              * and so we actually want __declspec even on GCC, see "Microsoft
+              * Windows Function Attributes" in the GCC manual and the
+              * recommendations in https://gcc.gnu.org/wiki/Visibility . */
+#            define SECP256K1_API extern __declspec(dllexport)
+         /* Avoid __attribute__ ((visibility("default"))) on Windows to get rid
+          * of warnings when compiling with -flto due to a bug in GCC, see
+          * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=116478 . */
+#        elif !defined(_WIN32) && defined (__GNUC__) && (__GNUC__ >= 4)
+#            define SECP256K1_API extern __attribute__ ((visibility("default")))
+#        else
+#            define SECP256K1_API extern
+#        endif
+#    else
+         /* On Windows, SECP256K1_STATIC must be defined when consuming
+          * libsecp256k1 as a static library. Note that SECP256K1_STATIC is a
+          * "consumer-only" macro, and it has no meaning when building
+          * libsecp256k1. */
+#        if defined(_WIN32) && !defined(SECP256K1_STATIC)
+#            define SECP256K1_API extern __declspec(dllimport)
+#        else
+#            define SECP256K1_API extern
+#        endif
+#    endif
 #endif
 
 /* Warning attributes
@@ -221,8 +233,11 @@ typedef int (*rustsecp256k1_v0_12_nonce_function)(
 
 /** A built-in constant secp256k1 context object with static storage duration, to be
  *  used in conjunction with rustsecp256k1_v0_12_selftest.
+SECP256K1_API const rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_static;
  *
  *  This context object offers *only limited functionality* , i.e., it cannot be used
+SECP256K1_API const rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_no_precomp
+SECP256K1_DEPRECATED("Use rustsecp256k1_v0_12_context_static instead");
  *  for API functions that perform computations involving secret keys, e.g., signing
  *  and public key generation. If this restriction applies to a specific API function,
  *  it is mentioned in its documentation. See rustsecp256k1_v0_12_context_create if you need a
@@ -230,8 +245,11 @@ typedef int (*rustsecp256k1_v0_12_nonce_function)(
  *
  *  It is highly recommended to call rustsecp256k1_v0_12_selftest before using this context.
  */
+SECP256K1_API const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_static;
 
 /** Deprecated alias for rustsecp256k1_v0_12_context_static. */
+SECP256K1_API const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_no_precomp
+SECP256K1_DEPRECATED("Use rustsecp256k1_v0_12_context_static instead");
 
 /** Perform basic self tests (to be used in conjunction with rustsecp256k1_v0_12_context_static)
  *
@@ -265,6 +283,10 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *  The only valid non-deprecated flag in recent library versions is
  *  SECP256K1_CONTEXT_NONE, which will create a context sufficient for all functionality
  *  offered by the library. All other (deprecated) flags will be treated as equivalent
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_create(
+    unsigned int flags
+) SECP256K1_WARN_UNUSED_RESULT;
+
  *  to the SECP256K1_CONTEXT_NONE flag. Though the flags parameter primarily exists for
  *  historical reasons, future versions of the library may introduce new flags.
  *
@@ -277,6 +299,14 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *  Do not create a new context object for each operation, as construction and
  *  randomization can take non-negligible time.
  */
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_clone(
+    const rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1) SECP256K1_WARN_UNUSED_RESULT;
+
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_create(
+    unsigned int flags
+) SECP256K1_WARN_UNUSED_RESULT;
+
 /** Copy a secp256k1 context object (into dynamically allocated memory).
  *
  *  This function uses malloc to allocate memory. It is guaranteed that malloc is
@@ -287,8 +317,16 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *  the caller (e.g., using memcpy). Create a new context instead.
  *
  *  Returns: pointer to a newly created context object.
+SECP256K1_API void rustsecp256k1_v0_12_context_destroy(
+    rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1);
+
  *  Args:    ctx: pointer to a context to copy (not rustsecp256k1_v0_12_context_static).
  */
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_clone(
+    const rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1) SECP256K1_WARN_UNUSED_RESULT;
+
 /** Destroy a secp256k1 context object (created in dynamically allocated memory).
  *
  *  The context pointer may not be used afterwards.
@@ -303,6 +341,10 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *               rustsecp256k1_v0_12_context_create or rustsecp256k1_v0_12_context_clone
  *               (i.e., not rustsecp256k1_v0_12_context_static).
  */
+SECP256K1_API void rustsecp256k1_v0_12_context_destroy(
+    rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1);
+
 /** Set a callback function to be called when an illegal argument is passed to
  *  an API call. It will only trigger for violations that are mentioned
  *  explicitly in the header.
@@ -581,8 +623,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ecdsa_verify(
  *  anyone can trivially modify a signature after the fact to enforce this
  *  property anyway.
  *
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_rfc6979;
  *  The lower S value is always between 0x1 and
  *  0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0,
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_default;
  *  inclusive.
  *
  *  No other forms of ECDSA malleability are known and none seem likely, but
@@ -606,8 +650,10 @@ SECP256K1_API int rustsecp256k1_v0_12_ecdsa_signature_normalize(
  * If a data pointer is passed, it is assumed to be a pointer to 32 bytes of
  * extra entropy.
  */
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_rfc6979;
 
 /** A default safe nonce generation function (currently equal to rustsecp256k1_v0_12_nonce_function_rfc6979). */
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_default;
 
 /** Create an ECDSA signature.
  *
@@ -684,21 +730,13 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_seckey_neg
     unsigned char *seckey
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
 
-/** Same as rustsecp256k1_v0_12_ec_seckey_negate, but DEPRECATED. Will be removed in
- *  future versions. */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_privkey_negate(
-    const rustsecp256k1_v0_12_context *ctx,
-    unsigned char *seckey
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2)
-  SECP256K1_DEPRECATED("Use rustsecp256k1_v0_12_ec_seckey_negate instead");
-
 /** Negates a public key in place.
  *
  *  Returns: 1 always
  *  Args:   ctx:        pointer to a context object
  *  In/Out: pubkey:     pointer to the public key to be negated.
  */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_pubkey_negate(
+SECP256K1_API int rustsecp256k1_v0_12_ec_pubkey_negate(
     const rustsecp256k1_v0_12_context *ctx,
     rustsecp256k1_v0_12_pubkey *pubkey
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
@@ -723,15 +761,6 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_seckey_twe
     unsigned char *seckey,
     const unsigned char *tweak32
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
-
-/** Same as rustsecp256k1_v0_12_ec_seckey_tweak_add, but DEPRECATED. Will be removed in
- *  future versions. */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_privkey_tweak_add(
-    const rustsecp256k1_v0_12_context *ctx,
-    unsigned char *seckey,
-    const unsigned char *tweak32
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3)
-  SECP256K1_DEPRECATED("Use rustsecp256k1_v0_12_ec_seckey_tweak_add instead");
 
 /** Tweak a public key by adding tweak times the generator to it.
  *
@@ -770,15 +799,6 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_seckey_twe
     unsigned char *seckey,
     const unsigned char *tweak32
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
-
-/** Same as rustsecp256k1_v0_12_ec_seckey_tweak_mul, but DEPRECATED. Will be removed in
- *  future versions. */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_privkey_tweak_mul(
-    const rustsecp256k1_v0_12_context *ctx,
-    unsigned char *seckey,
-    const unsigned char *tweak32
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3)
-  SECP256K1_DEPRECATED("Use rustsecp256k1_v0_12_ec_seckey_tweak_mul instead");
 
 /** Tweak a public key by multiplying it by a tweak value.
  *
@@ -866,7 +886,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ec_pubkey_com
  *           msg: pointer to an array containing the message
  *        msglen: length of the message array
  */
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_tagged_sha256(
+SECP256K1_API int rustsecp256k1_v0_12_tagged_sha256(
     const rustsecp256k1_v0_12_context *ctx,
     unsigned char *hash32,
     const unsigned char *tag,

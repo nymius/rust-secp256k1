@@ -548,40 +548,39 @@ static void musig_nonce_test(void) {
     }
 }
 
-static void sha256_tag_test_internal(rustsecp256k1_v0_12_sha256 *sha_tagged, unsigned char *tag, size_t taglen) {
-    rustsecp256k1_v0_12_sha256 sha;
-    rustsecp256k1_v0_12_sha256_initialize_tagged(&sha, tag, taglen);
-    test_sha256_eq(&sha, sha_tagged);
-}
-
 /* Checks that the initialized tagged hashes have the expected
  * state. */
 static void sha256_tag_test(void) {
     rustsecp256k1_v0_12_sha256 sha;
     {
-        char tag[] = "KeyAgg list";
+        /* "KeyAgg list" */
+        static const unsigned char tag[] = {'K', 'e', 'y', 'A', 'g', 'g', ' ', 'l', 'i', 's', 't'};
         rustsecp256k1_v0_12_musig_keyagglist_sha256(&sha);
-        sha256_tag_test_internal(&sha, (unsigned char*)tag, sizeof(tag) - 1);
+        test_sha256_tag_midstate(&sha, tag, sizeof(tag));
     }
     {
-        char tag[] = "KeyAgg coefficient";
+        /* "KeyAgg coefficient" */
+        static const unsigned char tag[] = {'K', 'e', 'y', 'A', 'g', 'g', ' ', 'c', 'o', 'e', 'f', 'f', 'i', 'c', 'i', 'e', 'n', 't'};
         rustsecp256k1_v0_12_musig_keyaggcoef_sha256(&sha);
-        sha256_tag_test_internal(&sha, (unsigned char*)tag, sizeof(tag) - 1);
+        test_sha256_tag_midstate(&sha, tag, sizeof(tag));
     }
     {
-        unsigned char tag[] = "MuSig/aux";
+        /* "MuSig/aux" */
+        static const unsigned char tag[] = { 'M', 'u', 'S', 'i', 'g', '/', 'a', 'u', 'x' };
         rustsecp256k1_v0_12_nonce_function_musig_sha256_tagged_aux(&sha);
-        sha256_tag_test_internal(&sha, (unsigned char*)tag, sizeof(tag) - 1);
+        test_sha256_tag_midstate(&sha, tag, sizeof(tag));
     }
     {
-        unsigned char tag[] = "MuSig/nonce";
+        /* "MuSig/nonce" */
+        static const unsigned char tag[] = { 'M', 'u', 'S', 'i', 'g', '/', 'n', 'o', 'n', 'c', 'e' };
         rustsecp256k1_v0_12_nonce_function_musig_sha256_tagged(&sha);
-        sha256_tag_test_internal(&sha, (unsigned char*)tag, sizeof(tag) - 1);
+        test_sha256_tag_midstate(&sha, tag, sizeof(tag));
     }
     {
-        unsigned char tag[] = "MuSig/noncecoef";
+        /* "MuSig/noncecoef" */
+        static const unsigned char tag[] = { 'M', 'u', 'S', 'i', 'g', '/', 'n', 'o', 'n', 'c', 'e', 'c', 'o', 'e', 'f' };
         rustsecp256k1_v0_12_musig_compute_noncehash_sha256_tagged(&sha);
-        sha256_tag_test_internal(&sha, (unsigned char*)tag, sizeof(tag) - 1);
+        test_sha256_tag_midstate(&sha, tag, sizeof(tag));
     }
 }
 
@@ -910,12 +909,15 @@ static void musig_test_vectors_signverify(void) {
              * the signing key does not belong to any pubkey. */
             continue;
         }
+
         expected = c->error != MUSIG_PUBKEY;
         CHECK(expected == musig_vectors_keyagg_and_tweak(&error, &keyagg_cache, NULL, vector->pubkeys, NULL, c->key_indices_len, c->key_indices, 0, NULL, NULL));
         CHECK(expected || c->error == error);
         if (!expected) {
             continue;
         }
+        CHECK(rustsecp256k1_v0_12_ec_pubkey_parse(CTX, &pubkey, vector->pubkeys[0], sizeof(vector->pubkeys[0])));
+        CHECK(rustsecp256k1_v0_12_keypair_create(CTX, &keypair, vector->sk));
 
         expected = c->error != MUSIG_AGGNONCE;
         CHECK(expected == rustsecp256k1_v0_12_musig_aggnonce_parse(CTX, &aggnonce, vector->aggnonces[c->aggnonce_index]));
@@ -924,14 +926,10 @@ static void musig_test_vectors_signverify(void) {
         }
         CHECK(rustsecp256k1_v0_12_musig_nonce_process(CTX, &session, &aggnonce, vector->msgs[c->msg_index], &keyagg_cache));
 
-        CHECK(rustsecp256k1_v0_12_ec_pubkey_parse(CTX, &pubkey, vector->pubkeys[0], sizeof(vector->pubkeys[0])));
-        musig_test_set_secnonce(&secnonce, vector->secnonces[c->secnonce_index], &pubkey);
         expected = c->error != MUSIG_SECNONCE;
-        if (expected) {
-            CHECK(rustsecp256k1_v0_12_musig_partial_sign(CTX, &partial_sig, &secnonce, &keypair, &keyagg_cache, &session));
-        } else {
-            CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_musig_partial_sign(CTX, &partial_sig, &secnonce, &keypair, &keyagg_cache, &session));
-        }
+        CHECK(!expected);
+        musig_test_set_secnonce(&secnonce, vector->secnonces[c->secnonce_index], &pubkey);
+        CHECK_ILLEGAL(CTX, rustsecp256k1_v0_12_musig_partial_sign(CTX, &partial_sig, &secnonce, &keypair, &keyagg_cache, &session));
     }
     for (i = 0; i < sizeof(vector->verify_fail_case)/sizeof(vector->verify_fail_case[0]); i++) {
         const struct musig_verify_fail_error_case *c = &vector->verify_fail_case[i];

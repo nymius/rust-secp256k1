@@ -28,7 +28,7 @@ static const rustsecp256k1_v0_12_scalar rustsecp256k1_v0_12_scalar_one = SECP256
 static const rustsecp256k1_v0_12_scalar rustsecp256k1_v0_12_scalar_zero = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
 
 SECP256K1_INLINE static void rustsecp256k1_v0_12_scalar_clear(rustsecp256k1_v0_12_scalar *r) {
-    rustsecp256k1_v0_12_memclear(r, sizeof(rustsecp256k1_v0_12_scalar));
+    rustsecp256k1_v0_12_memclear_explicit(r, sizeof(rustsecp256k1_v0_12_scalar));
 }
 
 static int rustsecp256k1_v0_12_scalar_set_b32_seckey(rustsecp256k1_v0_12_scalar *r, const unsigned char *bin) {
@@ -90,11 +90,11 @@ static void rustsecp256k1_v0_12_scalar_split_lambda_verify(const rustsecp256k1_v
 #endif
 
 /*
- * Both lambda and beta are primitive cube roots of unity.  That is lamba^3 == 1 mod n and
+ * Both lambda and beta are primitive cube roots of unity.  That is lambda^3 == 1 mod n and
  * beta^3 == 1 mod p, where n is the curve order and p is the field order.
  *
  * Furthermore, because (X^3 - 1) = (X - 1)(X^2 + X + 1), the primitive cube roots of unity are
- * roots of X^2 + X + 1.  Therefore lambda^2 + lamba == -1 mod n and beta^2 + beta == -1 mod p.
+ * roots of X^2 + X + 1.  Therefore lambda^2 + lambda == -1 mod n and beta^2 + beta == -1 mod p.
  * (The other primitive cube roots of unity are lambda^2 and beta^2 respectively.)
  *
  * Let l = -1/2 + i*sqrt(3)/2, the complex root of X^2 + X + 1. We can define a ring
