@@ -168,12 +168,11 @@ impl PrevoutsSummary {
     /// This function does not error because [`PrevoutsSummary`] is assumed valid after creation.
     ///
     /// # Arguments
-    /// * `secp` - a secp256k1 verification engine.
     /// * `compressed` - a boolean indicating the preferred serialization output size.
     ///
     /// # Returns
     /// A byte vector with the serialized [`PrevoutsSummary`] in.
-    pub fn serialize<C: Verification>(&self, secp: &Secp256k1<C>, compressed: bool) -> Vec<u8> {
+    pub fn serialize(&self, compressed: bool) -> Vec<u8> {
         let (mut output, size, flags) = if compressed {
             (
                 vec![0u8; constants::PUBLIC_KEY_SIZE],
@@ -189,15 +188,18 @@ impl PrevoutsSummary {
         };
 
         // Do not check return type, as it can only return 1
-        let _res = unsafe {
-            ffi::secp256k1_silentpayments_recipient_prevouts_summary_serialize(
-                secp.ctx().as_ptr(),
-                output.as_mut_c_ptr(),
-                size,
-                self.as_c_ptr(),
-                flags,
-            )
-        };
+        let _res = crate::with_global_context(
+            |secp: &Secp256k1<crate::AllPreallocated>| unsafe {
+                ffi::secp256k1_silentpayments_recipient_prevouts_summary_serialize(
+                    secp.ctx().as_ptr(),
+                    output.as_mut_c_ptr(),
+                    size,
+                    self.as_c_ptr(),
+                    flags,
+                )
+            },
+            None,
+        );
 
         output
     }
