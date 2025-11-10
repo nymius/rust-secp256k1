@@ -446,7 +446,9 @@ impl std::error::Error for SilentpaymentDerivationError {}
 impl core::fmt::Display for SilentpaymentDerivationError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         match self {
-            SilentpaymentDerivationError => write!(f, "Failed while deriving silent payment output x-only public keys"),
+            SilentpaymentDerivationError => {
+                write!(f, "Failed while deriving silent payment output x-only public keys")
+            }
         }
     }
 }
