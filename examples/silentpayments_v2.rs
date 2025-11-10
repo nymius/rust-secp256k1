@@ -222,7 +222,7 @@ fn main() -> anyhow::Result<()> {
             let spend_pubkeys = [&mut unlabeled_spend_pubkey];
             let carol_scan_key = SecretKey::from_secret_bytes(CAROL_SCAN_KEY)?;
 
-            let prevouts_summary = PrevoutsSummary::parse(&secp, &input33)?;
+            let prevouts_summary = PrevoutsSummary::parse(&input33)?;
             let potential_outputs =
                 prevouts_summary.create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys)?;
             let mut found: u32 = 0;

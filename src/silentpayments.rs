@@ -207,7 +207,6 @@ impl PrevoutsSummary {
     /// Parse a 33-byte or 65-byte sequence into a [`PrevoutsSummary`] struct.
     ///
     /// # Arguments:
-    /// * `secp` - a secp256k1 verification engine.
     /// * `input` - a 33-byte or 65-byte slice.
     ///
     /// # Returns:
@@ -215,20 +214,22 @@ impl PrevoutsSummary {
     ///
     /// # Errors:
     /// * [`PrevoutsSummaryError::ParseFailure`] if the slice could not be parsed.
-    pub fn parse<C: Verification>(
-        secp: &Secp256k1<C>,
+    pub fn parse(
         input: &[u8],
     ) -> Result<Self, PrevoutsSummaryError> {
         let mut prevouts_summary = Self::new();
 
-        let res = unsafe {
-            ffi::secp256k1_silentpayments_recipient_prevouts_summary_parse(
-                secp.ctx().as_ptr(),
-                prevouts_summary.as_mut_c_ptr(),
-                input.as_c_ptr(),
-                input.len(),
-            )
-        };
+        let res = crate::with_global_context(
+            |secp: &Secp256k1<crate::AllPreallocated>| unsafe {
+                ffi::secp256k1_silentpayments_recipient_prevouts_summary_parse(
+                    secp.ctx().as_ptr(),
+                    prevouts_summary.as_mut_c_ptr(),
+                    input.as_c_ptr(),
+                    input.len(),
+                )
+            },
+            None,
+        );
 
         if res == 1 {
             Ok(prevouts_summary)
