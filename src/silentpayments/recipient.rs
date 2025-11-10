@@ -148,7 +148,10 @@ impl PrevoutsSummary {
             Err(PrevoutsSummaryError::CreationFailure)
         }
     }
+}
 
+#[cfg(feature = "silentpayments_light_scan")]
+impl PrevoutsSummary {
     /// Serialize a [`PrevoutsSummary`] struct into a 33-byte or 65-byte sequence.
     ///
     /// Serializing a prevouts_summary object created with [`PrevoutsSummary::create`] will result in

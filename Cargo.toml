@@ -22,6 +22,7 @@ recovery = ["secp256k1-sys/recovery"]
 lowmemory = ["secp256k1-sys/lowmemory"]
 global-context = ["std"]
 silentpayments = ["rand", "secp256k1-sys/silentpayments"]
+silentpayments_light_scan = []
 # disable re-randomization of the global context, which provides some
 # defense-in-depth against sidechannel attacks. You should only use
 # this feature if you expect the `rand` crate's thread_rng to panic.
@@ -76,7 +77,7 @@ required-features = ["rand", "std"]
 
 [[example]]
 name = "silentpayments"
-required-features = ["silentpayments"]
+required-features = ["silentpayments", "silentpayments_light_scan"]
 
 [workspace]
 members = ["secp256k1-sys"]
