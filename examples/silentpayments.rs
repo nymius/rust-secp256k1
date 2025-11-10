@@ -169,7 +169,7 @@ fn main() -> anyhow::Result<()> {
     let m: u32 = 1;
 
     let (label, label_tweak32) =
-        silentpayments_recipient_create_label(&secp, &bob_scan_seckey, m)?;
+        silentpayments_recipient_create_label(&bob_scan_seckey, m)?;
 
     let bob_spend_pubkey = PublicKey::from_slice(&BOB_SPEND_PUBKEY)?;
 
