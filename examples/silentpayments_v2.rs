@@ -183,7 +183,7 @@ fn main() -> anyhow::Result<()> {
     {
         let input33 = {
             let prevouts_summary =
-                PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
+                PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
 
             let light_client_data33 = prevouts_summary.serialize(&secp, true);
 

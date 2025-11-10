@@ -97,7 +97,6 @@ impl PrevoutsSummary {
     /// for later use, the caller can save the result with [`PrevoutsSummary::serialize`].
     ///
     /// # Arguments
-    /// * `secp` - a secp256k1 verification engine.
     /// * `lexmin_outpoint` - serialized smallest outpoint (lexicographically)
     ///   from the transaction inputs.
     /// * `xonly_pubkeys` - pointer to an array of pointers to taproot x-only
@@ -112,8 +111,7 @@ impl PrevoutsSummary {
     /// * [`PrevoutsSummaryError::CreationFailure] - the prevout summary could not be created
     ///   because arguments are invalid or transaction is not a silent payment transaction (no inputs
     ///   for shared secret derivation).
-    pub fn create<C: Verification>(
-        secp: &Secp256k1<C>,
+    pub fn create(
         lexmin_outpoint: &[u8; 36],
         xonly_pubkeys: Option<&[&XOnlyPublicKey]>,
         plain_pubkeys: Option<&[&PublicKey]>,
@@ -138,14 +136,19 @@ impl PrevoutsSummary {
                 ),
             };
 
-            ffi::secp256k1_silentpayments_recipient_prevouts_summary_create(
-                secp.ctx().as_ptr(),
-                prevouts_summary.as_mut_c_ptr(),
-                lexmin_outpoint.as_c_ptr(),
-                ffi_xonly_pubkeys,
-                n_xonly_pubkeys,
-                ffi_plain_pubkeys,
-                n_plain_pubkeys,
+            crate::with_global_context(
+                |secp: &Secp256k1<crate::AllPreallocated>| {
+                    ffi::secp256k1_silentpayments_recipient_prevouts_summary_create(
+                        secp.ctx().as_ptr(),
+                        prevouts_summary.as_mut_c_ptr(),
+                        lexmin_outpoint.as_c_ptr(),
+                        ffi_xonly_pubkeys,
+                        n_xonly_pubkeys,
+                        ffi_plain_pubkeys,
+                        n_plain_pubkeys,
+                    )
+                },
+                None,
             )
         };
 
