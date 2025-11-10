@@ -110,7 +110,7 @@ fn main() -> anyhow::Result<()> {
         let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
         let m = 1;
-        let (label, label_tweak) = silentpayments_recipient_create_label(&secp, &bob_scan_key, m)?;
+        let (label, label_tweak) = silentpayments_recipient_create_label(&bob_scan_key, m)?;
 
         let mut tweak_map = HashMap::<[u8; 33], [u8; 32]>::new();
 
