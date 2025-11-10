@@ -152,7 +152,6 @@ fn main() -> anyhow::Result<()> {
     let taproot_seckeys: Vec<&Keypair> = taproot_seckeys.iter().collect();
 
     let tx_outputs = silentpayments_sender_create_outputs(
-        &secp,
         &recipients,
         &SMALLEST_OUTPOINT,
         Some(&taproot_seckeys),

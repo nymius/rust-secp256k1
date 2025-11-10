@@ -158,7 +158,6 @@ fn main() -> anyhow::Result<()> {
         let sender_keypairs: Vec<&_> = sender_keypairs.iter().collect();
 
         let tx_outputs = silentpayments_sender_create_outputs(
-            &secp,
             &recipients,
             &SMALLEST_OUTPOINT,
             Some(&sender_keypairs),
