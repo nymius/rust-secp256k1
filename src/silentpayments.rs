@@ -254,7 +254,6 @@ impl PrevoutsSummary {
     /// for the recipient and get the full output tweak needed to spend the outputs.
     ///
     /// # Aruments
-    /// * `secp` - a secp256k1 verification engine.
     /// * `scan_seckey` - the recipient scanning [`SecretKey`].
     /// * `spend_pubkeys` - slice with the recipient's spend [`PublicKey`]s (labeled or unlabeled).
     ///
@@ -265,9 +264,8 @@ impl PrevoutsSummary {
     /// # Errors
     /// * [`PrevoutsSummaryError::OutputCreationFailure`] - if the transaction is not a silent
     ///   payment transacion.
-    pub fn create_output_pubkeys<C: Verification>(
+    pub fn create_output_pubkeys(
         &self,
-        secp: &Secp256k1<C>,
         scan_seckey: &SecretKey,
         spend_pubkeys: &[&mut PublicKey],
     ) -> Result<Vec<XOnlyPublicKey>, PrevoutsSummaryError> {
@@ -275,14 +273,21 @@ impl PrevoutsSummary {
             let mut outputs_xonly = vec![ffi::XOnlyPublicKey::new(); spend_pubkeys.len()];
             let mut ffi_outputs_xonly =
                 outputs_xonly.iter_mut().map(|k| k as *mut _).collect::<Vec<_>>();
-            let res = ffi::secp256k1_silentpayments_recipient_create_output_pubkeys(
-                secp.ctx().as_ptr(),
-                ffi_outputs_xonly.as_mut_c_ptr(),
-                scan_seckey.as_c_ptr(),
-                self.as_c_ptr(),
-                spend_pubkeys.as_c_ptr() as *const *mut ffi::PublicKey,
-                spend_pubkeys.len(),
+
+            let res = crate::with_global_context(
+                |secp: &Secp256k1<crate::AllPreallocated>| {
+                    ffi::secp256k1_silentpayments_recipient_create_output_pubkeys(
+                        secp.ctx().as_ptr(),
+                        ffi_outputs_xonly.as_mut_c_ptr(),
+                        scan_seckey.as_c_ptr(),
+                        self.as_c_ptr(),
+                        spend_pubkeys.as_c_ptr() as *const *mut ffi::PublicKey,
+                        spend_pubkeys.len(),
+                    )
+                },
+                None,
             );
+
             if res == 1 {
                 let length = outputs_xonly.len();
                 let capacity = outputs_xonly.capacity();

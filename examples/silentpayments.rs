@@ -227,7 +227,7 @@ fn main() -> anyhow::Result<()> {
     let spend_pubkeys = [&mut carol_spend_pubkey];
 
     let potential_output =
-        prevouts_summary.create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys)?;
+        prevouts_summary.create_output_pubkeys(&carol_scan_key, &spend_pubkeys)?;
 
     let mut found: bool = false;
 
