@@ -180,7 +180,7 @@ fn main() -> anyhow::Result<()> {
     let tx_inputs_ref = tx_inputs_ref.as_slice();
 
     let public_data: PrevoutsSummary =
-        PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(tx_inputs_ref), None)?;
+        PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(tx_inputs_ref), None)?;
 
     let mut tweak_map = HashMap::<[u8; 33], [u8; 32]>::new();
 

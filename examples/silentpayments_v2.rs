@@ -181,7 +181,7 @@ fn main() -> anyhow::Result<()> {
     let tx_outputs_ref: Vec<&XOnlyPublicKey> = tx_outputs.iter().collect();
 
     let prevouts_summary =
-        PrevoutsSummary::create(&secp, &SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None).unwrap();
+        PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None).unwrap();
 
     let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
