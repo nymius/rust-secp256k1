@@ -224,7 +224,7 @@ fn main() -> anyhow::Result<()> {
 
             let prevouts_summary = PrevoutsSummary::parse(&input33)?;
             let potential_outputs =
-                prevouts_summary.create_output_pubkeys(&secp, &carol_scan_key, &spend_pubkeys)?;
+                prevouts_summary.create_output_pubkeys(&carol_scan_key, &spend_pubkeys)?;
             let mut found: u32 = 0;
             for tx_output in tx_outputs.iter() {
                 if *tx_output == potential_outputs[0] {
