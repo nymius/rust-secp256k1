@@ -326,7 +326,6 @@ impl core::fmt::Display for SilentpaymentDerivationError {
 /// unfindable by the recipient.
 ///
 /// # Arguments
-/// * `secp` - a secp256k1 verification engine.
 /// * `recipients` - slice of [`SilentpaymentsRecipient`] mutable references. The index indicates
 ///   its position in the original ordering. The recipients will be grouped by scan public key in
 ///   place (as specified in BIP0352), but generated outputs are saved in the `generated_outputs`
@@ -348,8 +347,7 @@ impl core::fmt::Display for SilentpaymentDerivationError {
 ///   - Input secret keys sum to 0 or the negation of a spend key (negligible probability if at least
 ///     one of the input secret keys is uniformly random and independent of all other keys).
 ///   - A hash output is not a valid scalar (negligible probability per hash evaluation).
-pub fn silentpayments_sender_create_outputs<C: Verification>(
-    secp: &Secp256k1<C>,
+pub fn silentpayments_sender_create_outputs(
     recipients: &[&mut SilentpaymentsRecipient],
     lexmin_outpoint: &[u8; 36],
     taproot_seckeys: Option<&[&Keypair]>,
@@ -379,16 +377,22 @@ pub fn silentpayments_sender_create_outputs<C: Verification>(
         let mut ffi_generated_outputs =
             generated_outputs.iter_mut().map(|k| k as *mut _).collect::<Vec<_>>();
 
-        let res = ffi::secp256k1_silentpayments_sender_create_outputs(
-            secp.ctx().as_ptr(),
-            ffi_generated_outputs.as_mut_c_ptr(),
-            recipients.as_c_ptr() as *const *mut ffi::SilentpaymentsRecipient,
-            recipients.len(),
-            lexmin_outpoint.as_c_ptr(),
-            ffi_taproot_seckeys,
-            n_taproot_seckeys,
-            ffi_plain_seckeys,
-            n_plain_seckeys,
+        let seed = [0u8; 32];
+        let res = crate::with_global_context(
+            |secp: &Secp256k1<crate::AllPreallocated>| {
+                ffi::secp256k1_silentpayments_sender_create_outputs(
+                    secp.ctx().as_ptr(),
+                    ffi_generated_outputs.as_mut_c_ptr(),
+                    recipients.as_c_ptr() as *const *mut ffi::SilentpaymentsRecipient,
+                    recipients.len(),
+                    lexmin_outpoint.as_c_ptr(),
+                    ffi_taproot_seckeys,
+                    n_taproot_seckeys,
+                    ffi_plain_seckeys,
+                    n_plain_seckeys,
+                )
+            },
+            Some(&seed),
         );
 
         if res == 1 {
