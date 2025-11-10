@@ -185,7 +185,7 @@ fn main() -> anyhow::Result<()> {
             let prevouts_summary =
                 PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
 
-            let light_client_data33 = prevouts_summary.serialize(&secp, true);
+            let light_client_data33 = prevouts_summary.serialize(true);
 
             let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 

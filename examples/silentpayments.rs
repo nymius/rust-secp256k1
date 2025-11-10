@@ -216,7 +216,7 @@ fn main() -> anyhow::Result<()> {
         println!("Bob did not find any outputs in this transaction.\n");
     }
 
-    let input33 = public_data.serialize(&secp, true);
+    let input33 = public_data.serialize(true);
 
     let prevouts_summary = PrevoutsSummary::parse(&secp, &input33)?;
 
