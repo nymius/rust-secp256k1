@@ -7,7 +7,7 @@ use secp256k1::{
         silentpayments_recipient_scan_outputs, silentpayments_sender_create_outputs,
         PrevoutsSummary, SilentpaymentsRecipient,
     },
-    Keypair, PublicKey, Scalar, Secp256k1, SecretKey, XOnlyPublicKey,
+    Keypair, PublicKey, Scalar, SecretKey, XOnlyPublicKey,
 };
 use std::{collections::HashMap, ffi::c_void};
 
@@ -99,7 +99,6 @@ pub unsafe extern "C" fn label_lookup(
 }
 
 fn main() -> anyhow::Result<()> {
-    let secp = Secp256k1::new();
     let mut sender_keypairs = Vec::<Keypair>::new();
     let mut recipients = Vec::<SilentpaymentsRecipient>::new();
 
@@ -188,7 +187,6 @@ fn main() -> anyhow::Result<()> {
             let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
             let found_outputs = silentpayments_recipient_scan_outputs(
-                &secp,
                 &tx_outputs_ref,
                 &bob_scan_key,
                 &prevouts_summary,
@@ -233,7 +231,6 @@ fn main() -> anyhow::Result<()> {
 
             if found == 1 {
                 let found_outputs = silentpayments_recipient_scan_outputs(
-                    &secp,
                     &tx_outputs_ref,
                     &carol_scan_key,
                     &prevouts_summary,
