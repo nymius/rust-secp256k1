@@ -1,13 +1,6 @@
 use core::slice;
 use secp256k1::{
-    ffi::types::c_uchar,
-    silentpayments::{
-        silentpayments_recipient_create_label,
-        silentpayments_recipient_create_labeled_spend_pubkey,
-        silentpayments_recipient_scan_outputs, silentpayments_sender_create_outputs,
-        PrevoutsSummary, SilentpaymentsRecipient,
-    },
-    Keypair, PublicKey, Scalar, SecretKey, XOnlyPublicKey,
+    ffi::types::c_uchar, silentpayments, Keypair, PublicKey, Scalar, SecretKey, XOnlyPublicKey,
 };
 use std::{collections::HashMap, ffi::c_void};
 
@@ -100,7 +93,7 @@ pub unsafe extern "C" fn label_lookup(
 
 fn main() -> anyhow::Result<()> {
     let mut sender_keypairs = Vec::<Keypair>::new();
-    let mut recipients = Vec::<SilentpaymentsRecipient>::new();
+    let mut recipients = Vec::<silentpayments::sender::Recipient>::new();
 
     let unlabeled_spend_pubkey =
         PublicKey::from_byte_array_compressed(BOB_SCAN_AND_SPEND_PUBKEYS[1])?;
@@ -109,7 +102,7 @@ fn main() -> anyhow::Result<()> {
         let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
         let m = 1;
-        let (label, label_tweak) = silentpayments_recipient_create_label(&bob_scan_key, m)?;
+        let (label, label_tweak) = silentpayments::recipient::create_label(&bob_scan_key, m)?;
 
         let mut tweak_map = HashMap::<[u8; 33], [u8; 32]>::new();
 
@@ -122,7 +115,7 @@ fn main() -> anyhow::Result<()> {
         };
 
         let labeled_spend_pubkey =
-            silentpayments_recipient_create_labeled_spend_pubkey(&unlabeled_spend_pubkey, &label)?;
+            silentpayments::recipient::create_labeled_spend_pubkey(&unlabeled_spend_pubkey, &label)?;
 
         let bob_address: [[u8; 33]; 2] =
             [BOB_SCAN_AND_SPEND_PUBKEYS[0], labeled_spend_pubkey.serialize()];
@@ -146,7 +139,7 @@ fn main() -> anyhow::Result<()> {
             let spend_pubkey = PublicKey::from_byte_array_compressed(address[1])?;
 
             let silentpayment_recipient =
-                SilentpaymentsRecipient::new(&scan_pubkey, &spend_pubkey, index);
+                silentpayments::sender::Recipient::new(&scan_pubkey, &spend_pubkey, index);
 
             recipients.push(silentpayment_recipient);
         }
@@ -154,7 +147,7 @@ fn main() -> anyhow::Result<()> {
         let recipients: Vec<&mut _> = recipients.iter_mut().collect();
         let sender_keypairs: Vec<&_> = sender_keypairs.iter().collect();
 
-        let tx_outputs = silentpayments_sender_create_outputs(
+        let tx_outputs = silentpayments::sender::create_outputs(
             &recipients,
             &SMALLEST_OUTPOINT,
             Some(&sender_keypairs),
@@ -178,13 +171,13 @@ fn main() -> anyhow::Result<()> {
     {
         let input33 = {
             let prevouts_summary =
-                PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
+                silentpayments::recipient::PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
 
             let light_client_data33 = prevouts_summary.serialize(true);
 
             let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
-            let found_outputs = silentpayments_recipient_scan_outputs(
+            let found_outputs = silentpayments::recipient::scan_outputs(
                 &tx_outputs_ref,
                 &bob_scan_key,
                 &prevouts_summary,
@@ -216,7 +209,7 @@ fn main() -> anyhow::Result<()> {
             let spend_pubkeys = [&mut unlabeled_spend_pubkey];
             let carol_scan_key = SecretKey::from_secret_bytes(CAROL_SCAN_KEY)?;
 
-            let prevouts_summary = PrevoutsSummary::parse(&input33)?;
+            let prevouts_summary = silentpayments::recipient::PrevoutsSummary::parse(&input33)?;
             let potential_outputs =
                 prevouts_summary.create_output_pubkeys(&carol_scan_key, &spend_pubkeys)?;
             let mut found: u32 = 0;
@@ -228,7 +221,7 @@ fn main() -> anyhow::Result<()> {
             }
 
             if found == 1 {
-                let found_outputs = silentpayments_recipient_scan_outputs(
+                let found_outputs = silentpayments::recipient::scan_outputs(
                     &tx_outputs_ref,
                     &carol_scan_key,
                     &prevouts_summary,
