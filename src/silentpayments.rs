@@ -220,9 +220,7 @@ impl PrevoutsSummary {
     ///
     /// # Errors:
     /// * [`PrevoutsSummaryError::ParseFailure`] if the slice could not be parsed.
-    pub fn parse(
-        input: &[u8],
-    ) -> Result<Self, PrevoutsSummaryError> {
+    pub fn parse(input: &[u8]) -> Result<Self, PrevoutsSummaryError> {
         let mut prevouts_summary = Self::new();
 
         let res = crate::with_global_context(
