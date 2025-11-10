@@ -121,10 +121,8 @@ fn main() -> anyhow::Result<()> {
             core::slice::from_raw_parts(tweak32, 32)
         };
 
-        let labeled_spend_pubkey = silentpayments_recipient_create_labeled_spend_pubkey(
-            &unlabeled_spend_pubkey,
-            &label,
-        )?;
+        let labeled_spend_pubkey =
+            silentpayments_recipient_create_labeled_spend_pubkey(&unlabeled_spend_pubkey, &label)?;
 
         let bob_address: [[u8; 33]; 2] =
             [BOB_SCAN_AND_SPEND_PUBKEYS[0], labeled_spend_pubkey.serialize()];
