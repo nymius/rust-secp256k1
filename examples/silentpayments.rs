@@ -174,7 +174,7 @@ fn main() -> anyhow::Result<()> {
     let bob_spend_pubkey = PublicKey::from_slice(&BOB_SPEND_PUBKEY)?;
 
     let _labeled_spend_pubkey =
-        silentpayments_recipient_create_labeled_spend_pubkey(&secp, &bob_spend_pubkey, &label)?;
+        silentpayments_recipient_create_labeled_spend_pubkey(&bob_spend_pubkey, &label)?;
 
     let tx_inputs_ref: Vec<&XOnlyPublicKey> = tx_inputs.iter().collect();
     let tx_inputs_ref = tx_inputs_ref.as_slice();

@@ -123,7 +123,6 @@ fn main() -> anyhow::Result<()> {
         };
 
         let labeled_spend_pubkey = silentpayments_recipient_create_labeled_spend_pubkey(
-            &secp,
             &unlabeled_spend_pubkey,
             &label,
         )?;
