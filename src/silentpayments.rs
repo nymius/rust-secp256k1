@@ -396,7 +396,6 @@ pub fn silentpayments_recipient_create_label(
 /// (labeled) spend public key.
 ///
 /// # Arguments:
-/// * `secp` - a secp256k1 verification engine.
 /// * `unlabeled_spend_pubkey` - the recipient's unlabeled spend public key to label.
 /// * `label` - the recipient's label public key.
 ///
@@ -405,19 +404,23 @@ pub fn silentpayments_recipient_create_label(
 ///
 /// # Errors
 /// * [`LabeledSpendPubkeyCreationError`] - if spend pubkey and label sum to zero (negligible probability for labels created according to BIP352).
-pub fn silentpayments_recipient_create_labeled_spend_pubkey<C: Verification>(
-    secp: &Secp256k1<C>,
+pub fn silentpayments_recipient_create_labeled_spend_pubkey(
     unlabeled_spend_pubkey: &PublicKey,
     label: &PublicKey,
 ) -> Result<PublicKey, LabeledSpendPubkeyCreationError> {
     unsafe {
         let mut pubkey = ffi::PublicKey::new();
 
-        let res = ffi::secp256k1_silentpayments_recipient_create_labeled_spend_pubkey(
-            secp.ctx().as_ptr(),
-            &mut pubkey,
-            unlabeled_spend_pubkey.as_c_ptr(),
-            label.as_c_ptr(),
+        let res = crate::with_global_context(
+            |secp: &Secp256k1<crate::AllPreallocated>| {
+                ffi::secp256k1_silentpayments_recipient_create_labeled_spend_pubkey(
+                    secp.ctx().as_ptr(),
+                    &mut pubkey,
+                    unlabeled_spend_pubkey.as_c_ptr(),
+                    label.as_c_ptr(),
+                )
+            },
+            None,
         );
 
         if res == 1 {
