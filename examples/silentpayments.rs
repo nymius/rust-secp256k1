@@ -218,7 +218,7 @@ fn main() -> anyhow::Result<()> {
 
     let input33 = public_data.serialize(true);
 
-    let prevouts_summary = PrevoutsSummary::parse(&secp, &input33)?;
+    let prevouts_summary = PrevoutsSummary::parse(&input33)?;
 
     let carol_scan_key = SecretKey::from_secret_bytes(CAROL_SCAN_KEY)?;
 
