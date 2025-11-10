@@ -19,7 +19,7 @@
 use crate::{
     constants,
     ffi::{self, types::c_void, CPtr},
-    Keypair, PublicKey, Secp256k1, SecretKey, Verification, XOnlyPublicKey,
+    Keypair, PublicKey, Secp256k1, SecretKey, XOnlyPublicKey,
 };
 use core::mem::forget;
 
@@ -604,7 +604,6 @@ impl core::fmt::Display for SilentpaymentScanningError {
 /// For creating the labels cache, [`silentpayments_recipient_create_label`] can be used.
 ///
 /// # Arguments
-/// * `secp` - a secp256k1 verification engine.
 /// * `tx_outputs` -  a slice of references to the transactions x-only public keys.
 /// * `scan_seckey` - the recipient's [`SecretKey`].
 /// * `prevouts_summary` - a reference to the transaction [`PrevoutsSummary`].
@@ -621,8 +620,7 @@ impl core::fmt::Display for SilentpaymentScanningError {
 /// # Errors
 /// * [`SilentpaymentScanningError`] - if the transaction is not a valid silent payment transaction
 ///   or the arguments are invalid.
-pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
-    secp: &Secp256k1<C>,
+pub fn silentpayments_recipient_scan_outputs<L>(
     tx_outputs: &[&XOnlyPublicKey],
     scan_seckey: &SecretKey,
     prevouts_summary: &PrevoutsSummary,
@@ -635,17 +633,24 @@ pub fn silentpayments_recipient_scan_outputs<C: Verification, L>(
         let mut ffi_found_outputs: Vec<_> = found_outputs.iter_mut().map(|k| k as *mut _).collect();
         let mut n_found_outputs: usize = 0;
 
-        let res = ffi::secp256k1_silentpayments_recipient_scan_outputs(
-            secp.ctx().as_ptr(),
-            ffi_found_outputs.as_mut_c_ptr(),
-            &mut n_found_outputs,
-            tx_outputs.as_c_ptr() as *const *const ffi::XOnlyPublicKey,
-            tx_outputs.len(),
-            scan_seckey.to_secret_bytes().as_c_ptr(),
-            prevouts_summary.as_c_ptr(),
-            unlabeled_spend_pubkey.as_c_ptr(),
-            label_lookup,
-            label_context.as_ref().map_or(core::ptr::null(), |x| *x as *const L as *const c_void),
+        let res = crate::with_global_context(
+            |secp: &Secp256k1<crate::AllPreallocated>| {
+                ffi::secp256k1_silentpayments_recipient_scan_outputs(
+                    secp.ctx().as_ptr(),
+                    ffi_found_outputs.as_mut_c_ptr(),
+                    &mut n_found_outputs,
+                    tx_outputs.as_c_ptr() as *const *const ffi::XOnlyPublicKey,
+                    tx_outputs.len(),
+                    scan_seckey.to_secret_bytes().as_c_ptr(),
+                    prevouts_summary.as_c_ptr(),
+                    unlabeled_spend_pubkey.as_c_ptr(),
+                    label_lookup,
+                    label_context
+                        .as_ref()
+                        .map_or(core::ptr::null(), |x| *x as *const L as *const c_void),
+                )
+            },
+            None,
         );
 
         if res == 1 {
