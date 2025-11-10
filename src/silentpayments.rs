@@ -201,7 +201,6 @@ impl core::fmt::Display for LabelTweakCreationError {
 ///           label = label_tweak * G
 ///
 /// # Arguments
-/// * `secp` - a secp256k1 verification engine.
 /// * `scan_seckey` - the recipient's scan [`SecretKey`].
 /// * `m` - a label integer for the m-th label (0 is used for change outputs).
 ///
@@ -211,8 +210,7 @@ impl core::fmt::Display for LabelTweakCreationError {
 ///
 /// # Errors
 /// * [`LabelTweakCreationError`] - if label tweak is not a valid scalar (negligible probability per hash evaluation).
-pub fn silentpayments_recipient_create_label<C: Verification>(
-    secp: &Secp256k1<C>,
+pub fn silentpayments_recipient_create_label(
     scan_seckey: &SecretKey,
     m: u32,
 ) -> Result<(PublicKey, [u8; 32]), LabelTweakCreationError> {
@@ -220,12 +218,17 @@ pub fn silentpayments_recipient_create_label<C: Verification>(
         let mut label = ffi::PublicKey::new();
         let mut label_tweak32 = [0u8; 32];
 
-        let res = ffi::secp256k1_silentpayments_recipient_create_label(
-            secp.ctx().as_ptr(),
-            &mut label,
-            label_tweak32.as_mut_c_ptr(),
-            scan_seckey.as_c_ptr(),
-            m,
+        let res = crate::with_global_context(
+            |secp: &Secp256k1<crate::AllPreallocated>| {
+                ffi::secp256k1_silentpayments_recipient_create_label(
+                    secp.ctx().as_ptr(),
+                    &mut label,
+                    label_tweak32.as_mut_c_ptr(),
+                    scan_seckey.as_c_ptr(),
+                    m,
+                )
+            },
+            None,
         );
 
         if res == 1 {
