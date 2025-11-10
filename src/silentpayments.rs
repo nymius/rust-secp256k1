@@ -59,9 +59,15 @@ impl std::error::Error for PrevoutsSummaryError {}
 impl core::fmt::Display for PrevoutsSummaryError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
         match self {
-            PrevoutsSummaryError::CreationFailure => write!(f, "Failed to create the prevouts summary"),
-            PrevoutsSummaryError::ParseFailure => write!(f, "Failed to parse the serialized prevout summary"),
-            PrevoutsSummaryError::OutputCreationFailure => write!(f, "Failed to create the output pubkeys"),
+            PrevoutsSummaryError::CreationFailure => {
+                write!(f, "Failed to create the prevouts summary")
+            }
+            PrevoutsSummaryError::ParseFailure => {
+                write!(f, "Failed to parse the serialized prevout summary")
+            }
+            PrevoutsSummaryError::OutputCreationFailure => {
+                write!(f, "Failed to create the output pubkeys")
+            }
         }
     }
 }
