@@ -73,10 +73,15 @@ static CAROL_ADDRESS: [[u8; 33]; 2] = [
     ],
 ];
 
-#[no_mangle]
-/// TODO: add docs
+/// Queries a Rust hash map from C code
+///
 /// # Safety
-/// TODO
+///
+/// The caller must ensure that the cache_ptr is a reference to a valid Rust [`HashMap`], mapping
+/// from [u8; 33] to [u8; 32] arrays. Any use of other struct is undefined behavior.
+///
+/// The cache_ptr must outlive the returned pointer.
+#[no_mangle]
 pub unsafe extern "C" fn label_lookup(
     label33: *const c_uchar,
     cache_ptr: *const c_void,
