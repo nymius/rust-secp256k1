@@ -361,11 +361,9 @@ impl core::fmt::Display for ScanningError {
 /// * `scan_seckey` - the recipient's [`SecretKey`].
 /// * `prevouts_summary` - a reference to the transaction [`PrevoutsSummary`].
 /// * `unlabeled_spend_pubkey` - a reference to the recipient's unlabeled spend [`PublicKey`].
-/// * `label_lookup` - a pointer to a callback function for looking up label values. This function
-///   takes a label public key as an argument and returns a pointer to the label tweak if it exists,
-///   otherwise returns a NULL pointer. Should be [`Option::None`] if labels are not used.
-/// * `label_context` - optionally a reference to a label context struct. [`Option::None`] if
-///   labels are not used or context is not needed by label_lookup .
+/// * `label_lookup` - a closure that wraps the label cache. This function takes a label public key
+///   as an argument and returns the label tweak if it exists. Should be [`Option::None`] if labels
+///   are not used.
 ///
 /// # Returns
 /// A vector of [`FoundOutput`]s.
@@ -373,18 +371,59 @@ impl core::fmt::Display for ScanningError {
 /// # Errors
 /// * [`SilentpaymentScanningError`] - if the transaction is not a valid silent payment transaction
 ///   or the arguments are invalid.
-pub fn scan_outputs<L>(
+pub fn scan_outputs<F>(
     tx_outputs: &[&XOnlyPublicKey],
     scan_seckey: &SecretKey,
     prevouts_summary: &PrevoutsSummary,
     unlabeled_spend_pubkey: &PublicKey,
-    label_lookup: ffi::LabelLookup,
-    label_context: Option<&L>,
-) -> Result<Vec<FoundOutput>, ScanningError> {
+    label_lookup: Option<F>,
+) -> Result<Vec<FoundOutput>, ScanningError>
+where
+    F: for<'a> FnMut(&'a [u8; 33]) -> Option<[u8; 32]>,
+{
     unsafe {
+        type Context<F> = (F, [u8; 32]);
+
         let mut found_outputs = vec![ffi::FoundOutput::default(); tx_outputs.len()];
         let mut ffi_found_outputs: Vec<_> = found_outputs.iter_mut().map(|k| k as *mut _).collect();
         let mut n_found_outputs: usize = 0;
+        let mut context: Context<F>;
+
+        let (label_lookup, label_context): (ffi::LabelLookup, _) =
+            if let Some(label_lookup) = label_lookup {
+                unsafe extern "C" fn callback<F>(
+                    label33: *const u8,
+                    label_context: *const c_void,
+                ) -> *const u8
+                where
+                    F: for<'a> FnMut(&'a [u8; 33]) -> Option<[u8; 32]>,
+                {
+                    let label33 = unsafe { &*label33.cast::<[u8; 33]>() };
+                    // `.cast_mut()` requires slightly higher (1.65) msrv :(, using `as` instead.
+                    let (f, storage) =
+                        unsafe { &mut *(label_context as *mut c_void).cast::<Context<F>>() };
+                    // `catch_unwind` is needed on Rust < 1.81 to prevent unwinding across an ffi
+                    // boundary, which is undefined behavior. When the user supplied function panics,
+                    // we abort the process. This behavior is consistent with Rust >= 1.81.
+                    match std::panic::catch_unwind(core::panic::AssertUnwindSafe(|| f(label33))) {
+                        Ok(Some(tweak)) => {
+                            // We can't return a pointer to `tweak` as that lives in this function's
+                            // (the callback) stack frame, `storage`, on the other hand, remains valid
+                            // for the duration of secp256k1_silentpayments_recipient_scan_outputs.
+                            *storage = tweak;
+                            storage.as_ptr()
+                        }
+                        Ok(None) => core::ptr::null(),
+                        Err(_) => {
+                            std::process::abort();
+                        }
+                    }
+                }
+                context = (label_lookup, [0u8; 32]);
+                (Some(callback::<F>), &mut context as *mut Context<F> as *const c_void)
+            } else {
+                (None, core::ptr::null())
+            };
 
         let res = crate::with_global_context(
             |secp: &Secp256k1<crate::AllPreallocated>| {
@@ -398,9 +437,7 @@ pub fn scan_outputs<L>(
                     prevouts_summary.as_c_ptr(),
                     unlabeled_spend_pubkey.as_c_ptr(),
                     label_lookup,
-                    label_context
-                        .as_ref()
-                        .map_or(core::ptr::null(), |x| *x as *const L as *const c_void),
+                    label_context,
                 )
             },
             None,

@@ -203,15 +203,11 @@ mod test {
 
         tweak_map.insert(label.serialize(), label_tweak32);
 
-        let tweak32 = unsafe {
-            let map = core::ptr::addr_of!(tweak_map) as *const c_void;
-            let tweak32 = label_lookup(&label.serialize() as *const c_uchar, map);
-            core::slice::from_raw_parts(tweak32, 32)
-        };
-
-        assert_eq!(tweak32, label_tweak32);
-
         let tx_outputs_ref: Vec<_> = tx_outputs.iter().collect();
+
+        let label_lookup = |key: &[u8; 33]| -> Option<[u8; 32]> { tweak_map.get(key).copied() };
+
+        assert_eq!(label_lookup(&label.serialize()), Some(label_tweak32));
 
         let found_outputs = sp_rx::scan_outputs(
             &tx_outputs_ref,
@@ -219,7 +215,6 @@ mod test {
             &public_data,
             &bob_spend_pubkey,
             Some(label_lookup),
-            Some(&tweak_map),
         ).expect("deterministic, shouldn't fail");
 
         assert_eq!(found_outputs.len(), 1, "First receiver should find one output after full scanning");
@@ -234,9 +229,9 @@ mod test {
             &carol_scan_key,
             &public_data,
             &carol_spend_pubkey,
-            None,
-            Option::<&HashMap<[u8; 33], [u8; 32]>>::None,
-        ).expect("deterministic, shouldn't fail");
+            None::<fn(&[u8; 33]) -> Option<[u8; 32]>>,
+        )
+        .expect("deterministic, shouldn't fail");
 
         assert_eq!(found_outputs.len(), 2, "Second receiver should find two outputs after full scanning");
         assert_eq!(

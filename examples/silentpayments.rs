@@ -1,8 +1,7 @@
-use core::slice;
 use secp256k1::{
-    ffi::types::c_uchar, silentpayments, Keypair, PublicKey, Scalar, SecretKey, XOnlyPublicKey,
+    silentpayments, Keypair, PublicKey, Scalar, SecretKey, XOnlyPublicKey,
 };
-use std::{collections::HashMap, ffi::c_void};
+use std::collections::HashMap;
 
 const N_INPUTS: usize = 2;
 const N_OUTPUTS: usize = 3;
@@ -66,36 +65,6 @@ static CAROL_ADDRESS: [[u8; 33]; 2] = [
     ],
 ];
 
-/// Queries a Rust hash map from C code
-///
-/// # Safety
-///
-/// The caller must ensure that the cache_ptr is a reference to a valid Rust [`HashMap`], mapping
-/// from [u8; 33] to [u8; 32] arrays. Any use of other struct is undefined behavior.
-///
-/// The cache_ptr must outlive the returned pointer.
-#[no_mangle]
-pub unsafe extern "C" fn label_lookup(
-    label33: *const c_uchar,
-    cache_ptr: *const c_void,
-) -> *const c_uchar {
-    // Safety checks
-    if label33.is_null() || cache_ptr.is_null() {
-        return std::ptr::null();
-    }
-
-    unsafe {
-        let cache = &*(cache_ptr as *const HashMap<[u8; 33], [u8; 32]>);
-        let label33_slice = slice::from_raw_parts(label33, 33);
-
-        if let Some(tweak) = cache.get(label33_slice) {
-            tweak.as_ptr()
-        } else {
-            std::ptr::null()
-        }
-    }
-}
-
 fn main() -> anyhow::Result<()> {
     let mut sender_keypairs = Vec::<Keypair>::new();
     let mut recipients = Vec::<silentpayments::sender::Recipient>::new();
@@ -113,14 +82,10 @@ fn main() -> anyhow::Result<()> {
 
         tweak_map.insert(label.serialize(), label_tweak);
 
-        let _tweak32 = unsafe {
-            let map = core::ptr::addr_of!(tweak_map) as *const c_void;
-            let tweak32 = label_lookup(&label.serialize() as *const c_uchar, map);
-            core::slice::from_raw_parts(tweak32, 32)
-        };
-
-        let labeled_spend_pubkey =
-            silentpayments::recipient::create_labeled_spend_pubkey(&unlabeled_spend_pubkey, &label)?;
+        let labeled_spend_pubkey = silentpayments::recipient::create_labeled_spend_pubkey(
+            &unlabeled_spend_pubkey,
+            &label,
+        )?;
 
         let bob_address: [[u8; 33]; 2] =
             [BOB_SCAN_AND_SPEND_PUBKEYS[0], labeled_spend_pubkey.serialize()];
@@ -173,18 +138,21 @@ fn main() -> anyhow::Result<()> {
     let tx_inputs_ref: Vec<&XOnlyPublicKey> = tx_inputs.iter().collect();
     let tx_outputs_ref: Vec<&XOnlyPublicKey> = tx_outputs.iter().collect();
 
-    let prevouts_summary =
-        silentpayments::recipient::PrevoutsSummary::create(&SMALLEST_OUTPOINT, Some(&tx_inputs_ref), None)?;
+    let prevouts_summary = silentpayments::recipient::PrevoutsSummary::create(
+        &SMALLEST_OUTPOINT,
+        Some(&tx_inputs_ref),
+        None,
+    )?;
 
     let bob_scan_key = SecretKey::from_secret_bytes(BOB_SCAN_KEY)?;
 
+    let label_lookup = |key: &[u8; 33]| -> Option<[u8; 32]> { label_context.get(key).copied() };
     let found_outputs = silentpayments::recipient::scan_outputs(
         &tx_outputs_ref,
         &bob_scan_key,
         &prevouts_summary,
         &unlabeled_spend_pubkey,
-        Some(label_lookup),
-        Some(&label_context),
+        Some(&label_lookup),
     )?;
 
     if !found_outputs.is_empty() {
@@ -212,8 +180,7 @@ fn main() -> anyhow::Result<()> {
         &carol_scan_key,
         &prevouts_summary,
         &unlabeled_spend_pubkey,
-        None,
-        Option::<&HashMap<[u8; 33], [u8; 32]>>::None,
+        None::<fn(&[u8; 33]) -> Option<[u8; 32]>>,
     )?;
 
     if !found_outputs.is_empty() {
