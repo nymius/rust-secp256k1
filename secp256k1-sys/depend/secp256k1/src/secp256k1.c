@@ -71,8 +71,8 @@ static const rustsecp256k1_v0_12_context rustsecp256k1_v0_12_context_static_ = {
     { rustsecp256k1_v0_12_default_error_callback_fn, 0 },
     0
 };
-const rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_static = &rustsecp256k1_v0_12_context_static_;
-const rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_no_precomp = &rustsecp256k1_v0_12_context_static_;
+const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_static = &rustsecp256k1_v0_12_context_static_;
+const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_no_precomp = &rustsecp256k1_v0_12_context_static_;
 
 /* Helper function that determines if a context is proper, i.e., is not the static context or a copy thereof.
  *

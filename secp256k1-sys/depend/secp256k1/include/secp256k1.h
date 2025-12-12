@@ -230,8 +230,11 @@ typedef int (*rustsecp256k1_v0_12_nonce_function)(
  *
  *  It is highly recommended to call rustsecp256k1_v0_12_selftest before using this context.
  */
+SECP256K1_API const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_static;
 
 /** Deprecated alias for rustsecp256k1_v0_12_context_static. */
+SECP256K1_API const rustsecp256k1_v0_12_context * const rustsecp256k1_v0_12_context_no_precomp
+SECP256K1_DEPRECATED("Use rustsecp256k1_v0_12_context_static instead");
 
 /** Perform basic self tests (to be used in conjunction with rustsecp256k1_v0_12_context_static)
  *
@@ -277,6 +280,14 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *  Do not create a new context object for each operation, as construction and
  *  randomization can take non-negligible time.
  */
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_create(
+    unsigned int flags
+) SECP256K1_WARN_UNUSED_RESULT;
+
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_create(
+    unsigned int flags
+) SECP256K1_WARN_UNUSED_RESULT;
+
 /** Copy a secp256k1 context object (into dynamically allocated memory).
  *
  *  This function uses malloc to allocate memory. It is guaranteed that malloc is
@@ -285,16 +296,28 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *
  *  Cloning rustsecp256k1_v0_12_context_static is not possible, and should not be emulated by
  *  the caller (e.g., using memcpy). Create a new context instead.
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_clone(
+    const rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1) SECP256K1_WARN_UNUSED_RESULT;
+
  *
  *  Returns: pointer to a newly created context object.
  *  Args:    ctx: pointer to a context to copy (not rustsecp256k1_v0_12_context_static).
  */
+SECP256K1_API rustsecp256k1_v0_12_context *rustsecp256k1_v0_12_context_clone(
+    const rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1) SECP256K1_WARN_UNUSED_RESULT;
+
 /** Destroy a secp256k1 context object (created in dynamically allocated memory).
  *
  *  The context pointer may not be used afterwards.
  *
  *  The context to destroy must have been created using rustsecp256k1_v0_12_context_create
  *  or rustsecp256k1_v0_12_context_clone. If the context has instead been created using
+SECP256K1_API void rustsecp256k1_v0_12_context_destroy(
+    rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1);
+
  *  rustsecp256k1_v0_12_context_preallocated_create or rustsecp256k1_v0_12_context_preallocated_clone, the
  *  behaviour is undefined. In that case, rustsecp256k1_v0_12_context_preallocated_destroy must
  *  be used instead.
@@ -303,6 +326,10 @@ SECP256K1_API void rustsecp256k1_v0_12_selftest(void);
  *               rustsecp256k1_v0_12_context_create or rustsecp256k1_v0_12_context_clone
  *               (i.e., not rustsecp256k1_v0_12_context_static).
  */
+SECP256K1_API void rustsecp256k1_v0_12_context_destroy(
+    rustsecp256k1_v0_12_context *ctx
+) SECP256K1_ARG_NONNULL(1);
+
 /** Set a callback function to be called when an illegal argument is passed to
  *  an API call. It will only trigger for violations that are mentioned
  *  explicitly in the header.
@@ -593,8 +620,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int rustsecp256k1_v0_12_ecdsa_verify(
  *
  *  The rustsecp256k1_v0_12_ecdsa_sign function will by default create signatures in the
  *  lower-S form, and rustsecp256k1_v0_12_ecdsa_verify will not accept others. In case
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_rfc6979;
  *  signatures come from a system that cannot enforce this property,
  *  rustsecp256k1_v0_12_ecdsa_signature_normalize must be called before verification.
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_default;
  */
 SECP256K1_API int rustsecp256k1_v0_12_ecdsa_signature_normalize(
     const rustsecp256k1_v0_12_context *ctx,
@@ -606,8 +635,10 @@ SECP256K1_API int rustsecp256k1_v0_12_ecdsa_signature_normalize(
  * If a data pointer is passed, it is assumed to be a pointer to 32 bytes of
  * extra entropy.
  */
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_rfc6979;
 
 /** A default safe nonce generation function (currently equal to rustsecp256k1_v0_12_nonce_function_rfc6979). */
+SECP256K1_API const rustsecp256k1_v0_12_nonce_function rustsecp256k1_v0_12_nonce_function_default;
 
 /** Create an ECDSA signature.
  *
