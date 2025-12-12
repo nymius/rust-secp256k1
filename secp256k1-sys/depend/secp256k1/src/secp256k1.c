@@ -234,7 +234,7 @@ int rustsecp256k1_v0_12_ec_pubkey_serialize(const rustsecp256k1_v0_12_context* c
     ARG_CHECK(pubkey != NULL);
     ARG_CHECK((flags & SECP256K1_FLAGS_TYPE_MASK) == SECP256K1_FLAGS_TYPE_COMPRESSION);
     if (rustsecp256k1_v0_12_pubkey_load(ctx, &Q, pubkey)) {
-        ret = rustsecp256k1_v0_12_eckey_pubkey_serialize(&Q, output, &len, flags & SECP256K1_FLAGS_BIT_COMPRESSION);
+        ret = rustsecp256k1_v0_12_eckey_pubkey_serialize(&Q, output, &len, !!(flags & SECP256K1_FLAGS_BIT_COMPRESSION));
         if (ret) {
             *outputlen = len;
         }

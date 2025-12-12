@@ -94,6 +94,8 @@ static int nonce_function_bip340(unsigned char *nonce32, const unsigned char *ms
     rustsecp256k1_v0_12_sha256_write(&sha, msg, msglen);
     rustsecp256k1_v0_12_sha256_finalize(&sha, nonce32);
     rustsecp256k1_v0_12_sha256_clear(&sha);
+    rustsecp256k1_v0_12_memclear(masked_key, sizeof(masked_key));
+
     return 1;
 }
 
